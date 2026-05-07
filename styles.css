@@ -3635,12 +3635,20 @@ body.low-stimulus .result-celebration::after {
     grid-template-columns: repeat(2, 1fr);
   }
 
+  body.story-pending-mode .phase-head {
+    display: none;
+  }
+
   .novel-scene {
+    --mobile-novel-visual-height: clamp(190px, 36vh, 248px);
     display: grid;
-    grid-template-rows: minmax(178px, 34vh) auto;
-    gap: 10px;
+    grid-template-rows: var(--mobile-novel-visual-height) auto;
+    gap: 8px;
     min-height: auto;
     padding: 12px;
+    background:
+      linear-gradient(180deg, rgba(255, 247, 232, 0.08), transparent 42%),
+      #17110e;
   }
 
   .story-pending .novel-scene {
@@ -3726,6 +3734,22 @@ body.low-stimulus .result-celebration::after {
     font-size: 14px;
   }
 
+  .novel-backdrop,
+  .novel-vignette {
+    bottom: auto;
+    height: var(--mobile-novel-visual-height);
+  }
+
+  .novel-backdrop {
+    object-position: center top;
+  }
+
+  .novel-vignette {
+    background:
+      linear-gradient(180deg, rgba(17, 12, 9, 0.1), rgba(17, 12, 9, 0.28) 52%, rgba(17, 12, 9, 0.78)),
+      linear-gradient(90deg, rgba(17, 12, 9, 0.66), transparent 34%, transparent 66%, rgba(17, 12, 9, 0.58));
+  }
+
   .novel-cast {
     position: relative;
     z-index: 1;
@@ -3733,7 +3757,7 @@ body.low-stimulus .result-celebration::after {
     align-self: end;
     justify-content: center;
     gap: clamp(4px, 2vw, 10px);
-    height: clamp(170px, 36vh, 236px);
+    height: var(--mobile-novel-visual-height);
     padding: 0 2px;
   }
 
@@ -3765,6 +3789,10 @@ body.low-stimulus .result-celebration::after {
     min-height: auto;
     margin: 0;
     padding: 16px 14px 14px;
+    background:
+      linear-gradient(transparent 31px, rgba(255, 247, 232, 0.055) 32px),
+      rgba(19, 13, 10, 0.98);
+    backdrop-filter: none;
   }
 
   .novel-box p {

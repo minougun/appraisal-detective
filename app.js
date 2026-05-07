@@ -715,6 +715,7 @@ function phaseGameLabel(key) {
 
 function applyStoryGate() {
   const pending = phaseStoryLines().length > 0 && !state.storyRevealed;
+  document.body.classList.toggle("story-pending-mode", pending);
   view.classList.toggle("story-pending", pending);
   view.querySelector(".novel-scene")?.classList.toggle("story-complete", state.storyRevealed);
 

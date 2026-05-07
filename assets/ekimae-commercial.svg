@@ -1,0 +1,78 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1200 760" role="img" aria-labelledby="title desc">
+  <title id="title">Ekimae commercial building</title>
+  <desc id="desc">A small station-front commercial building with tenant signs, a vacancy notice, repair marks, rooftop units, and street flow.</desc>
+  <defs>
+    <linearGradient id="sky" x1="0" x2="0" y1="0" y2="1">
+      <stop offset="0" stop-color="#40352d"/>
+      <stop offset="1" stop-color="#221915"/>
+    </linearGradient>
+    <linearGradient id="paper" x1="0" x2="1" y1="0" y2="1">
+      <stop offset="0" stop-color="#efe1c4"/>
+      <stop offset="1" stop-color="#c8a66f"/>
+    </linearGradient>
+    <filter id="shadow" x="-20%" y="-20%" width="140%" height="140%">
+      <feDropShadow dx="0" dy="16" stdDeviation="18" flood-color="#120c08" flood-opacity=".45"/>
+    </filter>
+    <pattern id="brick" width="58" height="34" patternUnits="userSpaceOnUse">
+      <rect width="58" height="34" fill="#8c6a4c"/>
+      <path d="M0 33h58M29 0v34" stroke="#6f5139" stroke-width="2" opacity=".45"/>
+    </pattern>
+  </defs>
+  <rect width="1200" height="760" fill="url(#sky)"/>
+  <path d="M0 610 C190 560 326 594 501 558 C760 504 930 560 1200 510 L1200 760 L0 760 Z" fill="#2d2721"/>
+  <path d="M0 662 C260 618 516 654 770 607 C918 580 1042 579 1200 548 L1200 760 L0 760 Z" fill="#4a4036"/>
+  <g opacity=".55" stroke="#d8bd80" stroke-width="5" stroke-linecap="round">
+    <path d="M814 607 C916 632 1004 675 1108 740"/>
+    <path d="M902 585 C996 610 1084 649 1190 702"/>
+  </g>
+  <g filter="url(#shadow)">
+    <path d="M224 158 L804 116 L865 623 L188 650 Z" fill="#33261f"/>
+    <path d="M248 176 L783 139 L838 608 L216 630 Z" fill="url(#brick)"/>
+    <path d="M235 169 L796 128 L803 190 L242 225 Z" fill="#5a4234"/>
+    <path d="M300 230 L448 222 L459 351 L306 357 Z" fill="#161b20" stroke="#d0b06a" stroke-width="8"/>
+    <path d="M510 218 L661 209 L673 339 L517 346 Z" fill="#172126" stroke="#d0b06a" stroke-width="8"/>
+    <path d="M694 205 L772 201 L786 337 L704 340 Z" fill="#2d3334" stroke="#d0b06a" stroke-width="8"/>
+    <path d="M286 392 L491 385 L500 577 L279 585 Z" fill="#161b20" stroke="#d0b06a" stroke-width="9"/>
+    <path d="M536 381 L787 371 L807 571 L545 579 Z" fill="#1b2528" stroke="#d0b06a" stroke-width="9"/>
+    <path d="M244 590 L839 568 L846 619 L219 641 Z" fill="#221a16"/>
+  </g>
+  <g>
+    <path d="M290 266 L431 260 L436 310 L292 316 Z" fill="#d8bd80"/>
+    <text x="318" y="298" font-family="Arial, sans-serif" font-weight="700" font-size="26" fill="#49331f">RENT</text>
+    <path d="M533 248 L645 242 L650 302 L536 309 Z" fill="#722f2c"/>
+    <text x="549" y="284" font-family="Arial, sans-serif" font-weight="700" font-size="22" fill="#f6dfbf">VACANT</text>
+    <path d="M697 236 L760 232 L766 313 L701 316 Z" fill="#f0e2c9"/>
+    <text x="711" y="282" font-family="Arial, sans-serif" font-weight="700" font-size="20" fill="#57372c">AD</text>
+  </g>
+  <g stroke="#2a201c" stroke-width="8" stroke-linecap="round" opacity=".85">
+    <path d="M470 154 l68 -4"/>
+    <path d="M494 151 l4 -52"/>
+    <path d="M535 148 l-5 -47"/>
+  </g>
+  <g fill="#50616a" stroke="#1e2427" stroke-width="5">
+    <rect x="438" y="93" width="62" height="42" rx="5"/>
+    <rect x="523" y="86" width="80" height="49" rx="5"/>
+  </g>
+  <g stroke="#591d1d" stroke-width="8" stroke-linecap="round">
+    <path d="M494 206 l-27 39"/>
+    <path d="M472 216 l51 18"/>
+    <path d="M448 199 l-18 34"/>
+  </g>
+  <g opacity=".9">
+    <path d="M62 610 C127 586 178 588 226 606" fill="none" stroke="#d9c28f" stroke-width="8" stroke-linecap="round"/>
+    <circle cx="122" cy="574" r="20" fill="#d9c28f"/>
+    <path d="M122 594 l-12 61M122 594 l23 55M110 619 h42" stroke="#d9c28f" stroke-width="8" stroke-linecap="round"/>
+    <circle cx="957" cy="538" r="18" fill="#d9c28f"/>
+    <path d="M957 556 l-10 58M957 556 l24 54M945 580 h39" stroke="#d9c28f" stroke-width="8" stroke-linecap="round"/>
+    <circle cx="1016" cy="570" r="15" fill="#d9c28f"/>
+    <path d="M1016 585 l-8 48M1016 585 l20 44M1005 604 h33" stroke="#d9c28f" stroke-width="7" stroke-linecap="round"/>
+  </g>
+  <g>
+    <path d="M145 470 L244 455 L259 585 L157 602 Z" fill="url(#paper)" stroke="#6a4631" stroke-width="6"/>
+    <path d="M166 498 L236 487 M169 524 L240 512 M173 552 L231 543" stroke="#8b5144" stroke-width="5" stroke-linecap="round"/>
+  </g>
+  <g opacity=".55">
+    <rect x="0" y="0" width="1200" height="760" fill="none" stroke="#f3dfb0" stroke-width="18"/>
+    <path d="M0 0h1200v760H0z" fill="none" stroke="#000" stroke-width="34" opacity=".22"/>
+  </g>
+</svg>

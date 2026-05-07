@@ -1,0 +1,113 @@
+<!doctype html>
+<html lang="ja">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>鑑定探偵 | Appraisal Detective</title>
+    <meta
+      name="description"
+      content="物件の真実を暴く、不動産鑑定評価ゲーム。"
+    />
+    <meta name="appraisal-low-stimulus-storage-key" content="appraisal-detective-low-stimulus" />
+    <script src="./boot.js"></script>
+    <link rel="stylesheet" href="./styles.css" />
+  </head>
+  <body>
+    <div class="app-shell">
+      <header class="topbar" aria-label="ゲーム概要">
+        <div>
+          <p class="eyebrow">不動産鑑定評価ゲーム</p>
+          <h1>鑑定探偵</h1>
+          <p class="title-sub">Appraisal Detective: 物件は嘘をつく。根拠だけが残る。</p>
+        </div>
+        <div class="case-meta" aria-label="案件情報">
+          <span id="case-number-meta">案件 001</span>
+          <span id="case-type-meta">国内住宅地</span>
+          <span id="mode-meta">通常レビュー</span>
+          <span id="timer-meta" class="timer-meta" aria-live="polite">経過 --</span>
+          <span>価格時点: 2026-05-05</span>
+          <button
+            class="audio-toggle"
+            id="stimulus-toggle"
+            type="button"
+            aria-pressed="false"
+            aria-label="低刺激モード。BGM、すべての効果音、赤いフラッシュ、証拠ボードの揺れを抑える"
+            aria-describedby="stimulus-help"
+            title="BGM、すべての効果音、赤いフラッシュ、証拠ボードの揺れを抑える"
+          >
+            低刺激 OFF
+          </button>
+          <span class="sr-only" id="stimulus-help">
+            低刺激モードをオンにすると、BGM、すべての効果音、依頼者圧力の赤いフラッシュ、証拠取得時の証拠ボード揺れを抑えます。OSの視差効果を減らす設定が有効な場合は自動的にオンになります。
+          </span>
+          <button class="audio-toggle" id="bgm-toggle" type="button" aria-pressed="true">BGM 待機中</button>
+          <button class="audio-toggle" id="audio-toggle" type="button" aria-pressed="true">SE ON</button>
+        </div>
+      </header>
+
+      <main class="game-grid">
+        <section class="main-panel" aria-live="polite">
+          <div class="phase-head">
+            <div>
+              <p class="eyebrow" id="phase-kicker">Phase 1 / 5</p>
+              <h2 id="phase-title" tabindex="-1">依頼受付</h2>
+              <p class="phase-objective" id="phase-objective">受任方針を1つ選ぶと現地調査へ進める。</p>
+            </div>
+            <div class="phase-progress" aria-label="進行状況">
+              <span data-step="0" class="active"></span>
+              <span data-step="1"></span>
+              <span data-step="2"></span>
+              <span data-step="3"></span>
+              <span data-step="4"></span>
+            </div>
+          </div>
+
+          <div id="phase-view" class="phase-view"></div>
+        </section>
+
+        <aside class="side-panel" aria-label="証拠ボード">
+          <section class="score-card">
+            <p class="eyebrow">Score</p>
+            <div class="score-grid">
+              <div class="score-investigation"><span id="score-investigation">0</span><small>調査</small></div>
+              <div class="score-reasoning"><span id="score-reasoning">0</span><small>推理</small></div>
+              <div class="score-appraisal"><span id="score-appraisal">0</span><small>鑑定判断</small></div>
+              <div class="score-ethics"><span id="score-ethics">0</span><small>倫理</small></div>
+            </div>
+          </section>
+
+          <section>
+            <div class="section-line">
+              <h3>証拠カード</h3>
+              <span id="evidence-count">0枚</span>
+            </div>
+            <div id="evidence-board" class="evidence-board empty">
+              物件や資料から根拠を発見すると、ここに専門用語カードとして蓄積されます。
+            </div>
+          </section>
+
+          <section>
+            <div class="section-line">
+              <h3>先輩メモ</h3>
+            </div>
+            <div id="mentor-log" class="mentor-log">
+              「鑑定評価額は依頼者の希望額ではない。根拠を積み上げて説明できる金額にするんだ。」
+            </div>
+          </section>
+        </aside>
+      </main>
+    </div>
+
+    <div id="sr-announcer" class="sr-only" aria-live="polite" aria-atomic="true"></div>
+    <div id="sr-alert" class="sr-only" aria-live="assertive" aria-atomic="true"></div>
+    <script src="./app-utils.js"></script>
+    <script src="./audio-controller.js"></script>
+    <script src="./game-state.js"></script>
+    <script src="./case-data.js"></script>
+    <script src="./commercial-case-pack.js"></script>
+    <script src="./case-schema.js"></script>
+    <script src="./scoring.js"></script>
+    <script src="./renderers/hbu-renderer.js"></script>
+    <script src="./app.js"></script>
+  </body>
+</html>

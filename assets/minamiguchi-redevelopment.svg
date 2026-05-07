@@ -1,0 +1,71 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1200 760" role="img" aria-labelledby="title desc">
+  <title id="title">Minamiguchi redevelopment site</title>
+  <desc id="desc">A station south-exit redevelopment site with old warehouses, active tenants, narrow alley, flood marker, and zoning height guide lines.</desc>
+  <defs>
+    <linearGradient id="sky" x1="0" x2="0" y1="0" y2="1">
+      <stop offset="0" stop-color="#3c342f"/>
+      <stop offset="1" stop-color="#201714"/>
+    </linearGradient>
+    <linearGradient id="paper" x1="0" x2="1" y1="0" y2="1">
+      <stop offset="0" stop-color="#e8d7b6"/>
+      <stop offset="1" stop-color="#b89560"/>
+    </linearGradient>
+    <pattern id="corrugated" width="28" height="90" patternUnits="userSpaceOnUse">
+      <rect width="28" height="90" fill="#6e655d"/>
+      <path d="M7 0v90M21 0v90" stroke="#504941" stroke-width="3" opacity=".55"/>
+    </pattern>
+    <filter id="shadow" x="-20%" y="-20%" width="140%" height="140%">
+      <feDropShadow dx="0" dy="18" stdDeviation="18" flood-color="#110b08" flood-opacity=".5"/>
+    </filter>
+  </defs>
+  <rect width="1200" height="760" fill="url(#sky)"/>
+  <path d="M0 604 C220 574 392 596 568 558 C770 514 969 538 1200 496 L1200 760 L0 760 Z" fill="#302823"/>
+  <path d="M0 670 C240 622 482 656 760 611 C938 582 1054 588 1200 552 L1200 760 L0 760 Z" fill="#4b4035"/>
+  <g opacity=".52" stroke="#d1b56f" stroke-width="5" stroke-linecap="round">
+    <path d="M740 601 C856 632 970 674 1108 742"/>
+    <path d="M854 580 C970 612 1080 650 1198 706"/>
+  </g>
+  <g opacity=".5" stroke="#b94b46" stroke-width="4" stroke-dasharray="16 12">
+    <path d="M688 108 L1050 72 L1082 426"/>
+    <path d="M742 108 L778 470"/>
+    <path d="M810 100 L856 464"/>
+  </g>
+  <g filter="url(#shadow)">
+    <path d="M180 252 L616 220 L644 622 L144 642 Z" fill="#2d251f"/>
+    <path d="M208 275 L587 249 L610 594 L174 613 Z" fill="url(#corrugated)"/>
+    <path d="M244 398 L383 391 L390 586 L237 594 Z" fill="#1c2020" stroke="#c4a56c" stroke-width="8"/>
+    <path d="M430 386 L562 380 L575 579 L438 586 Z" fill="#1b2327" stroke="#c4a56c" stroke-width="8"/>
+    <path d="M195 260 L600 232 L604 287 L199 318 Z" fill="#4c3b32"/>
+  </g>
+  <g filter="url(#shadow)">
+    <path d="M640 278 L905 252 L938 616 L626 628 Z" fill="#49372d"/>
+    <path d="M665 304 L879 283 L908 590 L650 603 Z" fill="#7d6049"/>
+    <path d="M695 342 L842 329 L849 390 L700 402 Z" fill="#d6bd7d"/>
+    <text x="716" y="376" font-family="Arial, sans-serif" font-size="28" font-weight="700" fill="#4e3324">TENANT</text>
+    <path d="M700 435 L861 422 L875 582 L706 590 Z" fill="#172026" stroke="#d6bd7d" stroke-width="8"/>
+  </g>
+  <g>
+    <path d="M92 530 L180 514 L202 636 L112 654 Z" fill="url(#paper)" stroke="#654633" stroke-width="6"/>
+    <path d="M116 558 L174 548 M120 588 L184 575 M126 618 L173 609" stroke="#8d4f45" stroke-width="5" stroke-linecap="round"/>
+    <text x="112" y="696" font-family="Arial, sans-serif" font-size="28" font-weight="700" fill="#d5bd82">FLOOD 2019</text>
+  </g>
+  <g stroke="#25201b" stroke-width="10" stroke-linecap="round">
+    <path d="M620 610 C672 640 724 661 792 690"/>
+    <path d="M666 610 C724 630 792 656 880 700"/>
+  </g>
+  <g opacity=".95">
+    <circle cx="330" cy="352" r="20" fill="#d9c28f"/>
+    <path d="M330 372 l-12 66M330 372 l24 63M316 400 h46" stroke="#d9c28f" stroke-width="8" stroke-linecap="round"/>
+    <circle cx="742" cy="405" r="18" fill="#d9c28f"/>
+    <path d="M742 423 l-10 60M742 423 l23 58M729 448 h40" stroke="#d9c28f" stroke-width="8" stroke-linecap="round"/>
+  </g>
+  <g stroke="#8a302d" stroke-width="7" stroke-linecap="round">
+    <path d="M486 274 l-42 68"/>
+    <path d="M445 282 l72 42"/>
+    <path d="M550 296 l-38 61"/>
+  </g>
+  <g opacity=".6">
+    <rect x="0" y="0" width="1200" height="760" fill="none" stroke="#f1dca8" stroke-width="18"/>
+    <path d="M0 0h1200v760H0z" fill="none" stroke="#000" stroke-width="34" opacity=".22"/>
+  </g>
+</svg>

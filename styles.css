@@ -3636,15 +3636,19 @@ body.low-stimulus .result-celebration::after {
   }
 
   .novel-scene {
-    min-height: 380px;
+    display: grid;
+    grid-template-rows: minmax(178px, 34vh) auto;
+    gap: 10px;
+    min-height: auto;
+    padding: 12px;
   }
 
   .story-pending .novel-scene {
-    min-height: 410px;
+    min-height: auto;
   }
 
   .title-screen .novel-scene {
-    min-height: 340px;
+    min-height: auto;
   }
 
   .title-screen-desk,
@@ -3723,19 +3727,43 @@ body.low-stimulus .result-celebration::after {
   }
 
   .novel-cast {
-    inset: auto 0 132px;
-    padding: 0 10px;
+    position: relative;
+    z-index: 1;
+    inset: auto;
+    align-self: end;
+    justify-content: center;
+    gap: clamp(4px, 2vw, 10px);
+    height: clamp(170px, 36vh, 236px);
+    padding: 0 2px;
   }
 
   .novel-character {
-    width: 118px;
-    height: 190px;
+    flex: 0 1 clamp(82px, 26vw, 104px);
+    width: clamp(82px, 26vw, 104px);
+    height: clamp(142px, 39vw, 180px);
+    transform: translateY(8px) scale(0.94);
+  }
+
+  .novel-character.active {
+    transform: translateY(0) scale(1);
+  }
+
+  .novel-character-label {
+    min-height: 24px;
+    margin-bottom: 8px;
+    padding: 3px 8px;
+    font-size: 11px;
   }
 
   .novel-box {
-    right: 10px;
-    bottom: 10px;
-    left: 10px;
+    position: relative;
+    z-index: 2;
+    right: auto;
+    bottom: auto;
+    left: auto;
+    width: auto;
+    min-height: auto;
+    margin: 0;
     padding: 16px 14px 14px;
   }
 

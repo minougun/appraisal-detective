@@ -29,6 +29,23 @@ const hbuRenderer = window.APPRAISAL_HBU_RENDERER ?? {};
 if (!hbuRenderer.hbuMatrixMarkup || !hbuRenderer.auditCriteriaMarkup) {
   throw new Error("APPRAISAL_HBU_RENDERER is not loaded.");
 }
+const evidenceRenderer = window.APPRAISAL_EVIDENCE_RENDERER ?? {};
+if (
+  !evidenceRenderer.evidenceCategory ||
+  !evidenceRenderer.evidenceBoardOrder ||
+  !evidenceRenderer.evidenceButton ||
+  !evidenceRenderer.reportEvidenceMarkup
+) {
+  throw new Error("APPRAISAL_EVIDENCE_RENDERER is not loaded.");
+}
+const gameplayCast = window.APPRAISAL_GAMEPLAY_CAST ?? {};
+if (!gameplayCast.gameplayCastReactions || !gameplayCast.gameplayCastMarkup) {
+  throw new Error("APPRAISAL_GAMEPLAY_CAST is not loaded.");
+}
+const scenarioEngine = window.APPRAISAL_SCENARIO_ENGINE ?? {};
+if (!scenarioEngine.activeMarketScenario || !scenarioEngine.scenarioClientDemand || !scenarioEngine.marketScenarioStatus) {
+  throw new Error("APPRAISAL_SCENARIO_ENGINE is not loaded.");
+}
 const schemaResult = window.APPRAISAL_CASE_SCHEMA?.validateCaseData?.(window.APPRAISAL_CASE_DATA);
 if (schemaResult && !schemaResult.ok) {
   console.error("Case schema errors", schemaResult.errors);
@@ -155,7 +172,7 @@ function selectedRebuttalOption() {
 }
 
 function activeMarketScenario() {
-  return state.marketScenario ?? currentCase().marketScenarios?.[0] ?? null;
+  return scenarioEngine.activeMarketScenario(state, currentCase());
 }
 
 function currentCaseEvidenceEntries() {
@@ -378,7 +395,8 @@ function renderEvidenceBoard({ selectable = false } = {}) {
   }
 
   board.className = "evidence-board";
-  evidenceBoardOrder(state.evidence, selectable).forEach((id) => {
+  const priorityIds = activeMarketScenario()?.supportEvidence ?? [];
+  evidenceRenderer.evidenceBoardOrder(state.evidence, { selectable, priorityIds }).forEach((id) => {
     board.append(evidenceButton(id, selectable, state.selectedReport.has(id)));
   });
 
@@ -393,55 +411,25 @@ function evidenceButton(id, selectable, selected) {
   const item = evidenceCatalog[id];
   const disabled = selectable && !selected && state.selectedReport.size >= 3;
   const category = evidenceCategory(id);
-  const button = document.createElement("button");
   const scenarioPriority = (activeMarketScenario()?.supportEvidence ?? []).includes(id);
-  button.className = `evidence-card evidence-${category} ${selected ? "selected" : ""} ${
-    scenarioPriority ? "scenario-priority" : ""
-  }`;
-  if (scenarioPriority && selectable) {
-    button.setAttribute("aria-label", `${item.term} ${item.title}。今回の市場シナリオ重点根拠`);
-  }
-  button.dataset.evidence = id;
-  button.disabled = !selectable || disabled;
-
-  const term = document.createElement("em");
-  term.textContent = item.term;
-  const title = document.createElement("strong");
-  title.textContent = item.title;
-  const detail = document.createElement("span");
-  detail.textContent = item.detail;
-  button.append(term, title, detail);
-  return button;
-}
-
-function evidenceBoardOrder(ids, selectable) {
-  if (!selectable) return ids;
-  const priorities = activeMarketScenario()?.supportEvidence ?? [];
-  if (priorities.length === 0) return ids;
-  const originalIndex = new Map(ids.map((id, index) => [id, index]));
-  return [...ids].sort((a, b) => {
-    const aPriority = priorities.includes(a) ? 0 : 1;
-    const bPriority = priorities.includes(b) ? 0 : 1;
-    if (aPriority !== bPriority) return aPriority - bPriority;
-    return originalIndex.get(a) - originalIndex.get(b);
+  return evidenceRenderer.evidenceButton({
+    id,
+    item,
+    category,
+    selectable,
+    selected,
+    disabled,
+    scenarioPriority,
   });
 }
 
 function reportEvidenceMarkup(id, index) {
   const item = evidenceCatalog[id];
-  return `
-    <div class="evidence-card evidence-${classToken(evidenceCategory(id), "appraisal")}">
-      <i>提示 ${index + 1}</i>
-      <em>${htmlText(item.term)}</em>
-      <strong>${htmlText(item.title)}</strong>
-      <span>${htmlText(item.detail)}</span>
-    </div>
-  `;
+  return evidenceRenderer.reportEvidenceMarkup({ id, item, category: evidenceCategory(id), index });
 }
 
 function evidenceCategory(id) {
-  const scores = evidenceCatalog[id].scores;
-  return Object.entries(scores).sort((a, b) => b[1] - a[1])[0]?.[0] ?? "appraisal";
+  return evidenceRenderer.evidenceCategory(evidenceCatalog, id);
 }
 
 function toggleReportEvidence(id) {
@@ -622,65 +610,15 @@ function showPhaseCutIn(nextPhase) {
 }
 
 function gameplayCastMarkup(key) {
-  const reactions = gameplayCastReactions(key);
-  if (reactions.length === 0) return "";
-  return `
-    <aside class="gameplay-cast gameplay-cast-${classToken(key)}" aria-label="ゲームプレイ中の会話反応">
-      ${reactions.map((reaction) => miniReactionMarkup(reaction)).join("")}
-    </aside>
-  `;
-}
-
-function gameplayCastReactions(key) {
-  if (!["field", "documents", "appraisal", "report"].includes(key)) return [];
-  const client = currentCase().client;
-  const scenario = activeMarketScenario();
-  const found = activeHotspots().filter((spot) => state.evidence.includes(spot.id)).length;
-  const selectedDocs = state.selectedDocs.size;
-  const supportCount = state.adjustmentSupport.size;
-  const reportCount = state.selectedReport.size;
-  const scenarioLine = scenario ? `${scenario.title}。${scenario.appraisalHint}` : "価格時点の市場条件を忘れない。";
-
-  if (key === "field") {
-    return [
-      { kind: "player", speaker: { name: "新人鑑定士", initial: "新" }, line: `違和感 ${found}/5。写真の中から価格形成要因を拾います。` },
-      { kind: "mentor", speaker: {}, line: "見た目の傷ではなく、市場参加者が嫌う理由に変換しろ。" },
-      { kind: "client", speaker: client, line: "そこまで細かく見るんですか。", pressure: false },
-    ];
-  }
-  if (key === "documents") {
-    return [
-      { kind: "player", speaker: { name: "新人鑑定士", initial: "新" }, line: `資料照合 ${selectedDocs}/2。説明と一次資料のズレを探します。` },
-      { kind: "mentor", speaker: {}, line: "矛盾は数字の綻びだ。事情補正や対象確定へ落とせ。" },
-      { kind: "client", speaker: client, line: "資料にも事情がありますから。", pressure: true },
-    ];
-  }
-  if (key === "appraisal") {
-    return [
-      { kind: "player", speaker: { name: "新人鑑定士", initial: "新" }, line: `調整根拠 ${supportCount}/2。集めたカードで調整幅を支えます。` },
-      { kind: "mentor", speaker: {}, line: scenarioLine },
-      { kind: "client", speaker: client, line: "結論が硬すぎると困ります。", pressure: true },
-    ];
-  }
-  return [
-    { kind: "player", speaker: { name: "新人鑑定士", initial: "新" }, line: `報告根拠 ${reportCount}/3。事実、分析、結論の順で組みます。` },
-    { kind: "mentor", speaker: {}, line: "証拠は多いほどいいわけじゃない。三枚で説明責任を果たせ。" },
-    { kind: "client", speaker: client, line: "もう少し言い方で調整できませんか。", pressure: true },
-  ];
-}
-
-function miniReactionMarkup({ kind, speaker, line, pressure = false }) {
-  const isClient = kind === "client";
-  const isPlayer = kind === "player";
-  const name = isClient ? speaker.name : isPlayer ? speaker.name ?? "新人鑑定士" : "先輩鑑定士";
-  const initial = isClient ? speaker.initial : isPlayer ? speaker.initial ?? "新" : "先";
-  const portraitClass = isClient ? speaker.portraitClass : isPlayer ? "portrait-player" : "portrait-mentor";
-  return `
-    <div class="cast-reaction cast-${classToken(kind)} ${pressure ? "pressure" : ""}">
-      <span class="mini-portrait ${classToken(portraitClass, "portrait-mentor")}" aria-hidden="true">${htmlText(initial)}</span>
-      <p><strong>${htmlText(name)}</strong><span>「${pressureLineHtml(line)}」</span></p>
-    </div>
-  `;
+  const reactions = gameplayCast.gameplayCastReactions(key, {
+    client: currentCase().client,
+    scenario: activeMarketScenario(),
+    found: activeHotspots().filter((spot) => state.evidence.includes(spot.id)).length,
+    selectedDocs: state.selectedDocs.size,
+    supportCount: state.adjustmentSupport.size,
+    reportCount: state.selectedReport.size,
+  });
+  return gameplayCast.gameplayCastMarkup(key, reactions);
 }
 
 function phaseGameKey() {
@@ -1198,14 +1136,6 @@ function animateCaseSelection(button) {
     file.classList.toggle("case-file-dismissed", !selected);
     if (selected) selectedFile = file;
   });
-  if (selectedFile) {
-    const deskRect = desk.getBoundingClientRect();
-    const fileRect = selectedFile.getBoundingClientRect();
-    const x = deskRect.left + deskRect.width / 2 - (fileRect.left + fileRect.width / 2);
-    const y = deskRect.top + deskRect.height / 2 - (fileRect.top + fileRect.height / 2);
-    selectedFile.style.setProperty("--case-select-x", `${Math.round(x)}px`);
-    selectedFile.style.setProperty("--case-select-y", `${Math.round(y)}px`);
-  }
   announce(`事件ファイルを選択。${caseDefinitions[selectedCaseId]?.shortTitle ?? "案件"}を開きます。`);
   if (motionReduced.matches) {
     resetCase({ caseId: selectedCaseId, challengeMode });
@@ -1397,7 +1327,6 @@ function renderFieldSurvey() {
           <button
             class="hotspot hotspot-${classToken(spot.id)} ${state.evidence.includes(spot.id) ? "found" : ""}"
             data-hotspot="${htmlAttr(spot.id)}"
-            style="left: ${htmlAttr(spot.x)}%; top: ${htmlAttr(spot.y)}%;"
             aria-label="${htmlAttr(evidenceCatalog[spot.id].title)}"
             title="${htmlAttr(evidenceCatalog[spot.id].title)}"
           ><span>${htmlText(spot.label)}</span></button>
@@ -1410,7 +1339,6 @@ function renderFieldSurvey() {
           <button
             class="hotspot decoy-hotspot hotspot-${classToken(spot.id)}"
             data-decoy="${htmlAttr(spot.id)}"
-            ${spot.x !== undefined && spot.y !== undefined ? `style="left: ${htmlAttr(spot.x)}%; top: ${htmlAttr(spot.y)}%;"` : ""}
             aria-label="${htmlAttr(`${spot.title}。鑑定評価の根拠になるか確認する`)}"
             title="${htmlAttr(spot.title)}"
           ><span>${htmlText(spot.label)}</span></button>
@@ -2024,7 +1952,7 @@ function renderReport() {
   const reportIds = Array.from(state.selectedReport);
   const rebuttal = clientRebuttal(reportIds);
   const scenario = activeMarketScenario();
-  const clientPressure = scenarioClientDemand(baseClientPressure);
+  const clientPressure = scenarioEngine.scenarioClientDemand(scenario, baseClientPressure);
 
   view.innerHTML = `
     ${state.termBurst ? `<div class="term-burst">${htmlText(state.termBurst)}</div>` : ""}
@@ -2158,13 +2086,6 @@ function renderReport() {
     renderResult();
   });
   view.querySelector("#restart-case").addEventListener("click", resetCase);
-}
-
-function scenarioClientDemand(fallbackLine) {
-  const scenario = activeMarketScenario();
-  if (!scenario) return fallbackLine;
-  if (scenario.clientDemand) return scenario.clientDemand;
-  return `${scenario.title}の話は分かります。ただ、今回の依頼目的に沿うよう、表現だけでも少し調整できませんか。`;
 }
 
 function rebuttalOptionsMarkup(reportIds) {
@@ -2529,29 +2450,16 @@ function replayBrief(total, scenarioStatus = marketScenarioStatus()) {
 
 function marketScenarioStatus() {
   const scenario = activeMarketScenario();
-  const scenarioList = currentCase().marketScenarios ?? [];
-  const supportEvidence = scenario?.supportEvidence ?? [];
-  const reportIds = Array.from(state.selectedReport);
-  const evidenceHits = supportEvidence.filter((id) => state.evidence.includes(id));
-  const reportHits = supportEvidence.filter((id) => reportIds.includes(id));
-  const scenarioIndex = scenario ? scenarioList.findIndex((item) => item.id === scenario.id) : -1;
-  const nextCompletion = currentRecord().completions + (state.resultSaved ? 0 : 1);
-  const seed =
-    scenario && scenarioIndex >= 0
-      ? `${currentCase().number}-${state.challengeMode ? "audit" : "normal"}-S${scenarioIndex + 1}-R${Math.max(1, nextCompletion)}`
-      : "";
-  const mastery = supportEvidence.length ? reportHits.length / supportEvidence.length : 0;
-  return {
+  return scenarioEngine.marketScenarioStatus({
     scenario,
-    scenarioIndex,
-    scenarioCount: scenarioList.length,
-    supportEvidence,
-    evidenceHits,
-    reportHits,
-    total: supportEvidence.length,
-    seed,
-    mastery,
-  };
+    scenarioList: currentCase().marketScenarios ?? [],
+    caseInfo: currentCase(),
+    challengeMode: state.challengeMode,
+    record: currentRecord(),
+    resultSaved: state.resultSaved,
+    selectedReport: state.selectedReport,
+    evidence: state.evidence,
+  });
 }
 
 function marketScenarioResultMarkup(status = marketScenarioStatus()) {

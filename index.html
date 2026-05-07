@@ -14,7 +14,7 @@
     />
     <meta name="appraisal-low-stimulus-storage-key" content="appraisal-detective-low-stimulus" />
     <script src="./boot.js"></script>
-    <link rel="stylesheet" href="./styles.css?v=20260507-mobile-vn3" />
+    <link rel="stylesheet" href="./styles.css?v=20260507-refactor1" />
   </head>
   <body>
     <div class="app-shell">
@@ -29,6 +29,7 @@
           <span id="case-type-meta">国内住宅地</span>
           <span id="mode-meta">通常レビュー</span>
           <span id="timer-meta" class="timer-meta" aria-live="polite">経過 --</span>
+          <span id="controller-meta" class="controller-meta">操作 A決定 / B戻る / X証拠 / +設定</span>
           <span>価格時点: 2026-05-05</span>
           <button
             class="audio-toggle"
@@ -112,6 +113,10 @@
     <script src="./case-schema.js"></script>
     <script src="./scoring.js"></script>
     <script src="./renderers/hbu-renderer.js"></script>
-    <script src="./app.js?v=20260507-mobile-vn3"></script>
+    <script src="./renderers/evidence-renderer.js"></script>
+    <script src="./scenario-engine.js"></script>
+    <script src="./gameplay-cast.js"></script>
+    <script src="./platform-controller.js"></script>
+    <script src="./app.js?v=20260507-refactor1"></script>
   </body>
 </html>

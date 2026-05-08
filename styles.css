@@ -161,7 +161,10 @@ h1 {
   font-weight: 600;
   line-height: 1.12;
   letter-spacing: 0.08em;
+  overflow-wrap: normal;
   text-shadow: rgba(0, 0, 0, 0.48) 0 6px 18px;
+  white-space: nowrap;
+  word-break: keep-all;
 }
 
 .title-sub {
@@ -3981,6 +3984,10 @@ body.low-stimulus .result-celebration::after {
   body.controller-evidence-open .side-panel {
     outline: 2px solid rgba(246, 201, 77, 0.82);
     outline-offset: 3px;
+  }
+
+  h1 {
+    font-size: 44px;
   }
 }
 

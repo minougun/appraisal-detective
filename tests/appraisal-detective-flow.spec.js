@@ -161,6 +161,36 @@ test("renders intake phase with reduced motion preference", async ({ page }) => 
   await expect(page.getByText("証拠カード")).toBeVisible();
 });
 
+test("keeps the game title on one line across common viewport widths", async ({ page }) => {
+  for (const viewport of [
+    { width: 320, height: 720 },
+    { width: 360, height: 740 },
+    { width: 375, height: 812 },
+    { width: 414, height: 896 },
+    { width: 768, height: 1024 },
+    { width: 1024, height: 768 },
+    { width: 1366, height: 900 },
+  ]) {
+    await page.setViewportSize(viewport);
+    await page.goto("http://127.0.0.1:44561/", { waitUntil: "networkidle" });
+
+    const titleMetrics = await page.locator("h1").evaluate((element) => {
+      const style = getComputedStyle(element);
+      const rect = element.getBoundingClientRect();
+      return {
+        height: rect.height,
+        lineHeight: Number.parseFloat(style.lineHeight),
+        scrollWidth: document.documentElement.scrollWidth,
+        whiteSpace: style.whiteSpace,
+      };
+    });
+
+    expect(titleMetrics.whiteSpace).toBe("nowrap");
+    expect(titleMetrics.height).toBeLessThanOrEqual(titleMetrics.lineHeight * 1.25);
+    expect(titleMetrics.scrollWidth).toBeLessThanOrEqual(viewport.width);
+  }
+});
+
 test("serves ImageGen-generated field survey images", async ({ request }) => {
   for (const file of [
     "kawabe-estate.generated.png",

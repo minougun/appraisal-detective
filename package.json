@@ -1,0 +1,20 @@
+{
+  "name": "appraisal-detective",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Local build of a real-estate appraisal detective game.",
+  "scripts": {
+    "start": "node scripts/serve-production.mjs",
+    "start:dev": "python3 -m http.server 44561",
+    "start:production": "node scripts/serve-production.mjs",
+    "generate:assets": "node scripts/generate-image-assets.mjs",
+    "export:switch": "node scripts/export-switch-port-data.mjs",
+    "test:switch-readiness": "node scripts/verify-switch-readiness.mjs",
+    "test:persona": "node scripts/persona-score-check.mjs",
+    "test:production": "node scripts/verify-production-server.mjs",
+    "test:e2e": "playwright test tests/*.spec.js --reporter=line"
+  },
+  "devDependencies": {
+    "@playwright/test": "1.59.1"
+  }
+}

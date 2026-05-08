@@ -3,10 +3,17 @@
     return state.marketScenario ?? caseInfo.marketScenarios?.[0] ?? null;
   }
 
-  function scenarioClientDemand(scenario, fallbackLine) {
+  function scenarioClientDemand(scenario, fallbackLine, context = {}) {
     if (!scenario) return fallbackLine;
     if (scenario.clientDemand) return scenario.clientDemand;
-    return `${scenario.title}の話は分かります。ただ、今回の依頼目的に沿うよう、表現だけでも少し調整できませんか。`;
+    const caseTitle = context.caseInfo?.shortTitle ?? "今回の案件";
+    const index = Number.isFinite(context.scenarioIndex) ? context.scenarioIndex : 0;
+    const variants = [
+      `${scenario.title}なら、${caseTitle}でも根拠の範囲で上側に説明できる余地はありますよね。`,
+      `${scenario.title}を前提に、評価書の表現でこちらの事情が伝わる組み立てにできませんか。`,
+      `先生の裁量で、${scenario.title}の市場条件を一番有利に説明できる余地を見てください。`,
+    ];
+    return variants[Math.abs(index) % variants.length];
   }
 
   function marketScenarioStatus({

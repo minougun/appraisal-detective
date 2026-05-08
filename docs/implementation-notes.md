@@ -1,0 +1,396 @@
+# 鑑定探偵 実装ノート
+
+## 目的
+
+前回レビューで確定した「不動産探偵」方針を、ブラウザで遊べるローカル版として実装した。
+
+実装対象は国内住宅地、駅前商業地、再開発予定地の3件。網羅的な鑑定評価書作成ではなく、以下の面白さを確認する。
+
+- 現地調査で違和感を見つける
+- 資料照合で矛盾を見抜く
+- 専門用語カードを根拠に鑑定判断を説明する
+- 依頼者圧力に対して独立性・中立性を守る
+
+## 設計上の反映
+
+- 14ステップを5フェーズへ圧縮した。
+- 計算はプレイヤーに手計算させず、取引事例の採否と減価要因の判断に集中させた。
+- 専門用語は隠さず、主表示にした。
+- 初出の専門用語はカードの説明文で自然に理解できるようにした。
+- 現地調査は写真風SVGにホットスポットを置き、発見の手触りを作った。
+- 報告パートでは証拠カードを3枚だけ選ばせ、全部集めれば自動満点にならない構造にした。
+- 日本語表示が環境依存で崩れないよう、自己ホストの `assets/fonts/NotoSansJP-VF.ttf` を読み込む。
+- UI辛口レビューを受け、白いSaaS風UIから「暗い鑑定事務所の机上に置かれた事件ファイル」方向へ変更した。
+- 証拠カードはクリーム色の紙、専門用語は赤ペン/スタンプ風、サイドバーは証拠ボード風にした。
+- 依頼者と先輩鑑定士の発話にアバター、色バー、圧力時の赤い演出を追加した。
+- 証拠発見時に証拠ボードが軽く反応する演出を追加した。
+- UI再レビューを受け、証拠カード左バーを主スコア分類別に色分けした。
+- スコア加算時のバンプ演出、先輩メモ更新時のフェード演出を追加した。
+- Phase 1の「高めに」を赤ペン風に強調し、初回表示時にも軽い圧力演出を発火するようにした。
+- 報告フェーズで証拠カードを選ぶと、専門用語が画面中央にフラッシュ表示されるようにした。
+- Unity版ペルソナレビューを受け、HTML版 `http://127.0.0.1:44561/` にも手触り改善を反映した。
+- ボタン操作、証拠取得、依頼者圧力、結果表示にWeb Audio APIの軽いプロシージャルSEを追加した。
+- 証拠取得時に専門用語カードが画面中央へ出る `evidence-pop` 演出を追加した。
+- 報告フェーズで証拠カードを選ぶと、証拠提示カードが叩きつけられる `evidence-slam` 演出を追加した。
+- スコア加算時にカテゴリ別の `+点` 表示を追加した。
+- 結果画面に `次周メモ` を追加し、見落とし候補と次回の証拠構成目標を表示するようにした。
+- リプレイ性の弱さに対応するため、結果画面から `監査レビューで二周目` に入れるようにした。
+- 監査レビューでは、`現地調査5/5`、`重要3カード提示`、`中立性維持` の3条件をチェックし、総合スコアに監査補正を加える。
+- 監査レビュー中は案件メタ表示を `監査レビュー` に切り替え、依頼受付の初期論点にも監査条件を表示する。
+- 完成形への移行として、タイトル/案件選択画面、案件001/002の通常/監査開始、ローカル記録保存を追加した。
+- `MVP` 表記をユーザー向けUIとREADME/package説明から外し、完成版へ伸ばす前提のローカル版として扱うようにした。
+- 完成形v1仕様を `/mnt/c/Users/minou/appraisal-detective/docs/completion-spec-2026-05-06.md` に追加した。
+- 案件002 `駅前商業地 / 収益還元法` を通常レビュー/監査レビューの両方でプレイ可能にした。
+- 案件002では、レントロール、空室、必要諸経費、還元利回り、直接還元法、収益価格の査定を主論点にした。
+- 案件選択、ヘッダーメタ、現地調査画像、資料照合、鑑定判断、報告対決、結果レビュー、監査条件を案件別に切り替えるようにした。
+- 案件002用の現地調査SVG `/mnt/c/Users/minou/appraisal-detective/assets/ekimae-commercial.svg` を追加した。
+- Playwrightに案件002完走テストを追加し、案件001/002の通常フローを自動検証できるようにした。
+- 旧単一案件形式の `localStorage` 記録は、案件001の記録として移行して読む。
+- `goal` 指示に基づき、完成形v1条件の不足分だった案件003 `南口再開発予定地 / 開発法・最有効使用` を追加した。
+- 最有効使用は全ての鑑定評価の前提として扱い、案件003では特に「どの用途・規模で開発するのが最有効使用か」と、開発法による価格を主論点にした。
+- 案件003用の現地調査SVG `/mnt/c/Users/minou/appraisal-detective/assets/minamiguchi-redevelopment.svg` を追加した。
+- Playwrightを全案件の通常レビュー/監査レビュー完走テストへ拡張した。
+- ImageGen 2 API方針に基づき、`scripts/generate-image-assets.mjs` を追加し、`gpt-image-1.5` のImages APIで3案件分の現地調査PNGを生成した。
+- 生成PNGを優先表示し、読み込み失敗時は既存SVGへフォールバックするようにした。
+- SEのON/OFFトグル、報告カードの提示順、結果ランクの大型スタンプを追加した。
+- 監査レビューの失敗パターン、生成PNG配信、SEトグル永続化をPlaywrightで検証するようにした。
+- 再調整レビューを受け、低刺激モード、各フェーズの終了条件表示、誤選択時の学びカード、通常レビューの次周チェックリストを追加した。
+- Google Fonts依存を外し、Playwright/Linux環境でも日本語が豆腐化しないよう `assets/fonts/NotoSansJP-VF.ttf` を自己ホストした。
+- フォントファイルはローカル完成判定用に `/mnt/c/Windows/Fonts/NotoSansJP-VF.ttf` から複製した。外部配布前にはライセンスと同梱可否を確認する。
+- 本番運用準備の弱点に対応し、`scripts/serve-production.mjs` を追加した。HTML/JS/CSS/画像/フォントをNodeで静的配信し、CSP、`nosniff`、フレーム拒否、権限ポリシー、HTML no-cache、アセット短期cacheを返す。
+- レビューで見つかった malformed percent-encoding のクラッシュを防ぐため、壊れたURLは 400 として拒否し、サーバが継続稼働することを production 検証に追加した。アセットはファイル名ハッシュがないため `immutable` を外し、短期cacheへ寄せた。
+- `case-data.js` の将来外部化に備え、ゲーム画面テンプレートへ流す案件名、依頼者名、資料、証拠カード、検算文言、結果文言は HTML escape する境界を追加した。依頼者圧力の強調だけは `pressure-word` span に限定して許可する。
+- 案件画像とフォールバック画像のURLは `assets/` 配下の既知拡張子だけを許可するようにし、`javascript:`、外部URL、パストラバーサルが `case-data.js` に混ざってもローカル既定画像へ落とす。
+- CSPから `unsafe-inline` を外すため、低刺激初回同期は `boot.js` へ移し、人物ポートレートとホットスポット位置もインラインstyleではなくCSSクラスで表現するようにした。
+- Claude Code辛口レビューを受け、低刺激モード時は全SEを抑制し、`prefers-reduced-motion` 時は `animation: none` / `transition: none` で残フレームを避けるようにした。
+- 証拠取得、証拠提示、学びカードのオーバーレイは `innerHTML` 注入をやめ、DOM生成 + `textContent` で組み立てるようにした。
+- オーバーレイ内容は通常通知 `#sr-announcer[aria-live="polite"]` と重要通知 `#sr-alert[aria-live="assertive"]` に複製し、スクリーンリーダーへ通知するようにした。
+- `npm run start` はCSP付きの `scripts/serve-production.mjs` を起動する標準コマンドにし、SimpleHTTPは `npm run start:dev` へ移した。
+- 現地調査のホットスポットは番号表示を視覚的に隠し、低不透明度の違和感マーカーとして表示するようにした。
+- 各案件にダミーホットスポットを2件ずつ追加し、価格形成要因として弱い対象をクリックした場合は学びカードと先輩メモで理由を返すようにした。
+- 報告対決で、提示した証拠に応じて依頼者が反論する表示を追加した。
+- 案件・証拠・現地ホットスポット・資料照合・案件別メカニクス定義を `case-data.js` に分離し、`app.js` は状態管理と描画ロジックへ寄せた。
+- 資料照合フェーズに案件固有メカニクスを追加した。案件001は `地積換算`、案件002は `DCR確認`、案件003は `用途地域マップ` を選択式で検算する。
+- 資料照合にダミー資料を追加し、正しい資料でも今回の価格形成要因として弱い場合は `資料の関連性` 学びカードを返すようにした。
+- 結果画面に `時間補正` と `判断補正` を追加し、経過時間、案件固有チェック、弱い根拠選択、報告順序でスコアが分散するようにした。
+- 差分再レビューv2のブロッカー対応として、証拠ボードの `innerHTML` 生成をDOM生成へ置き換え、`case-data.js` 読込失敗時はユーザー向け読込エラーを表示するようにした。
+- 低刺激モードの説明を全SE抑制後の挙動に合わせ、ライブリージョンは通常通知 `polite` と重要通知 `assertive` に分離した。
+- ダミー資料のタイトルから「採用する」「根拠にする」などの結論語を外し、資料名だけを見て判断させる形へ寄せた。
+- 差分再レビューv2の3日タスクとして、ヘッダーにプレイ中タイマーを追加し、案件別目標時間を常時見えるようにした。
+- 案件001の `地積換算` は `181.81平方メートル ÷ 3.3057 ≒ 55.0坪` の概算入力、案件002の `DCR確認` は `満室NOI 1,620万円 - 空室損 180万円 - 修繕費 90万円 = 1,350万円` の概算入力を追加した。
+- 報告順序ボーナスを「初手が中核論点」から、`事実→分析→結論` の論証構成評価へ変更した。
+- E2Eに、タイマー表示、数値検算の成功/失敗、良い判断パスと悪い判断パスのスコア差検証を追加した。
+- 差分再レビューv2の1週間タスクとして、スコア計算を `scoring.js` に分離し、`app.js` は状態管理と描画へさらに寄せた。
+- `case003` の `用途地域マップ` に、高度地区・北側斜線・道路後退を重ねた簡易ビジュアル検算と `legalFloorInput` の実現階数概算入力を追加した。
+- 鑑定判断フェーズに `調整幅` 選択を追加し、根拠カードに対して減価幅が弱すぎる/強すぎる場合は学びカードを返すようにした。
+- 報告対決フェーズに `再反論` 選択を追加し、提示済み証拠で依頼者の反論に返せるかをスコアへ反映するようにした。
+- 判断補正は、固有メカニクス、数値検算、論証構成、調整幅、再反論、弱い根拠選択を `scoring.js` で集計する。
+- 95点ゴール継続対応として、`調整幅` は選択だけでなく証拠カード2枚の調整根拠提示を必須にした。
+- 依頼者反論は、再反論文を選ぶだけでなく、提示済み証拠から反論根拠カードを1枚選ぶミニ対決へ拡張した。
+- 各案件に `marketScenarios` を追加し、完了回数に応じて市場条件が入れ替わるようにした。同じ案件でも、調整幅を支えるべき証拠が周回で少し変わる。
+- ノベルゲーム調への作り直しとして、案件選択と各フェーズ冒頭に `novelSceneMarkup()` を追加した。背景画像、依頼者/先輩の立ち絵、台詞送りボタンで、事件ファイルを読むADVとして進行感を出す。
+- ノベルシーンの送りボタン文言を `次の台詞` から `次へ` に変更し、メッセージを最後の台詞まで送る `スキップ` ボタンを追加した。
+- Cursor UIレビューの1週間改善プランとして、ノベルADVを単なる前口上ではなく操作画面の前に出す2段階表示へ変更した。各フェーズでは台詞を最後まで送るかスキップするまで、下のフォーム/カード操作を隠して、物語から捜査へ進む主従関係にした。
+- 会話シーンでは主人公の新人鑑定士を常時表示し、依頼者・先輩鑑定士に加えて主人公自身の判断台詞を各フェーズへ追加した。
+- 案件選択では、ファイルクリック時に非選択ファイルをフェードアウトし、選択ファイルだけを中央へ拡大してから受任面談へ進む演出を追加した。
+- ノベルの最終ボタンは `確認済み` ではなく、フェーズに応じて `事件ファイルを開く`、`受任判断へ`、`現地調査へ`、`資料照合へ`、`鑑定判断へ`、`報告対決へ` と表示するようにした。
+- ノベル本文 `#novel-line` に `aria-live="polite"` を付け、`次へ` / `スキップ` ボタンには進捗が伝わる `aria-label` を追加した。ノベル完了後は次の操作対象へフォーカスを移し、キーボード操作でも本体フェーズへ自然に入れるようにした。
+- 案件選択の密度を下げるため、開発者向けだった `完成版プロダクト骨格` 表記を `事件ファイル選択` へ置き換え、冒頭コピーを短くした。
+- モバイルではノベル画面の高さを抑え、案件選択時だけ低めの `min-height` にして、縦スクロール量を増やしすぎないようにした。
+- 周回時のノベル台詞と結果画面の先輩コメントに差分を入れ、初回とは違う「前回結果を踏まえた再調査」感を出すようにした。
+- ノベルゲート追加に合わせ、Playwrightのヘルパーとフェーズ2スクリーンショット/ビジュアルテストを更新した。
+- 「事件ファイル選択」が下にあるWebサイト風UIに見える問題へ対応し、タイトルノベル終了後は画面全体を机上の事件ファイル選択画面へ切り替えるようにした。
+- 案件選択は3枚の物理ファイルを直接開く操作にし、監査レビューは各ファイルに押された赤い監査スタンプとして表示するようにした。
+- 旧来の `事件ファイル選択` チップと説明カードを削除し、`机上の事件ファイルを開く` というゲーム内操作文脈へ寄せた。
+- タイトルシーンで先輩鑑定士の隣に表示されていた人物が案件001の依頼者に見えていたため、専用の主人公ポートレート `assets/player-novice-appraiser.generated.png` を生成し、左側キャラクターを `新人鑑定士` として表示するようにした。
+- タイトル冒頭の台詞も `新人鑑定士` 視点へ変更し、プレイヤーが先輩鑑定士の横で事件ファイルを読む立場だと分かるようにした。
+- 案件選択以降もWebページ下部にフォームが続いて見える問題へ対応し、受任面談、現地調査、資料照合、鑑定判断、報告対決、最終レビューを `phase-game-desk` の暗い机上操作画面に包むようにした。
+- 各フェーズの外側ヘッダーと進行ドットも `operation-mode` では暗いゲーム画面の一部として見えるようにし、案件選択と同じ「画面内で事件ファイルを操作している」文脈へ統一した。
+- ノベルシーンを閉じた後はフェーズ本体だけを表示し、説明パネルと操作ボタンがゲーム画面内に収まる状態へ切り替えるようにした。
+- `hidden` 属性が既存のグリッド表示に負けて会話中に `受任面談` 本体が見えていたため、`[hidden] { display: none !important; }` を追加し、会話シーン終了後だけ受任面談操作盤が出るようにした。
+- 案件選択時の先輩メモを修正し、最有効使用は全案件の前提で、再開発予定地では特に用途・規模の最有効使用判定と開発法が価格判断の中心になることが伝わる文言にした。
+
+## 主な専門用語
+
+- 価格時点
+- 対象不動産の確定
+- 現地調査
+- 地域要因
+- 個別的要因
+- 取引事例比較法
+- 事情補正
+- 時点修正
+- 試算価格の調整
+- 賃料水準
+- 収益性
+- 空室リスク
+- 必要諸経費
+- 還元利回り
+- 直接還元法
+- 収益価格の査定
+- 公法上の規制
+- 権利関係
+- 権利調整
+- 開発負担
+- 開発法
+- 最有効使用
+- 鑑定評価額
+- 独立性・中立性
+
+## 検証観点
+
+- 1件が10分以内に終わるか
+- 専門用語が没入感として機能するか
+- 現地調査の発見体験が退屈でないか
+- 証拠カード3枚の選択に意味があるか
+- 依頼者圧力に対する倫理判断がリプレイ動機になるか
+
+## 参照
+
+- 国土交通省 不動産鑑定評価基準等: https://www.mlit.go.jp/totikensangyo/totikensangyo_tk4_000024.html
+- 不動産鑑定評価基準 PDF: https://www.mlit.go.jp/common/001204057.pdf
+- 不動産鑑定評価基準運用上の留意事項 PDF: https://www.mlit.go.jp/common/001204044.pdf
+- UI参照: `/mnt/c/Users/minou/DESIGN.md`
+- DESIGN.md運用: `/mnt/c/Users/minou/docs/design-md-operational-guide-2026-04-25.md`
+- OpenAI Image generation guide: https://platform.openai.com/docs/guides/image-generation
+- OpenAI Images API reference: https://platform.openai.com/docs/api-reference/images/generate
+- OpenAI GPT Image 1.5 model page: https://platform.openai.com/docs/models/gpt-image-1.5
+
+## GitHub / Issue / PR
+
+- GitHub Issue: not_applicable
+- PR: not_applicable
+- 理由: 新規ローカルプロトタイプとして作成し、外部公開・push・PR作成は行っていない。
+
+## 検証結果
+
+- `curl -I http://127.0.0.1:44561/`: 200 OK
+- `curl -I http://127.0.0.1:44561/assets/kawabe-estate.svg`: 200 OK
+- `npx -y playwright screenshot --browser=chromium http://127.0.0.1:44561/ /tmp/appraisal-detective-font.png`: 日本語表示を確認
+- `npx -y playwright screenshot --browser=chromium http://127.0.0.1:44561/ /tmp/appraisal-detective-redesign.png`: UI改修後の初期画面を確認
+- `npx playwright test tests/phase-two-screenshot.spec.js --reporter=line`: `/tmp/appraisal-detective-phase2.png` にPhase 2画像表示を確認
+- `npm run test:e2e`: 4 passed
+  - 通常表示で5フェーズを完走し、最終レビューまで到達
+  - `prefers-reduced-motion: reduce` で依頼受付画面を表示確認
+  - Phase 2の物件イラストが表示され、`naturalWidth > 0` であることを確認
+- Unity版レビュー反映後:
+  - `curl -I http://127.0.0.1:44561/`: 200 OK
+  - `node --check app.js`: passed
+  - `npm run test:e2e`: 4 passed
+- 監査レビュー二周目追加後:
+  - `node --check app.js`: passed
+  - `npm run test:e2e`: 4 passed
+  - 通常完走後に `監査レビューで二周目` を押し、`#mode-meta` が `監査レビュー` へ変わることを確認。
+- 完成形入口追加後:
+  - `curl -I http://127.0.0.1:44561/`: 200 OK
+  - `curl -I http://127.0.0.1:44561/app.js`: 200 OK
+  - `node --check app.js`: passed
+  - `npm run test:e2e`: 4 passed
+  - 案件選択から通常レビューを開始し、既存5フェーズを完走できることを確認。
+- 案件002追加後:
+  - `curl -I http://127.0.0.1:44561/`: 200 OK
+  - `curl -I http://127.0.0.1:44561/assets/ekimae-commercial.svg`: 200 OK
+  - `node --check app.js`: passed
+  - `npm run test:e2e`: 5 passed
+  - 案件001の既存フロー、案件002の収益還元法フロー、Phase 2画像表示、`prefers-reduced-motion: reduce` を確認。
+- 完成形v1到達後:
+  - `curl -I http://127.0.0.1:44561/`: 200 OK
+  - `curl -I http://127.0.0.1:44561/assets/minamiguchi-redevelopment.svg`: 200 OK
+  - `node --check app.js`: passed
+  - `npm run test:e2e`: 9 passed
+  - 案件001/002/003の通常レビュー完走を確認。
+  - 案件001/002/003の監査レビュー完走と `監査補正 +15` を確認。
+  - Phase 2画像表示、`prefers-reduced-motion: reduce` を確認。
+- goal継続 / ImageGen 2 API反映後:
+  - `npm run generate:assets`: 3 generated PNG assets
+  - `curl -I http://127.0.0.1:44561/`: 200 OK
+  - `curl -I http://127.0.0.1:44561/assets/kawabe-estate.generated.png`: 200 OK / image/png
+  - `curl -I http://127.0.0.1:44561/assets/ekimae-commercial.generated.png`: 200 OK / image/png
+  - `curl -I http://127.0.0.1:44561/assets/minamiguchi-redevelopment.generated.png`: 200 OK / image/png
+  - `node --check app.js`: passed
+  - `npm run test:e2e`: 12 passed
+  - `npx playwright screenshot --browser=chromium --viewport-size=1440,1000 http://127.0.0.1:44561/ /tmp/appraisal-detective-goal-desktop.png`: captured
+  - `npx playwright screenshot --browser=chromium --viewport-size=390,900 http://127.0.0.1:44561/ /tmp/appraisal-detective-goal-mobile.png`: captured
+- ペルソナ95点ゴール達成後:
+  - `npm run generate:assets`: 4 portrait PNG assets generated, 3 scene PNG assets skipped because they already existed
+  - `curl -I http://127.0.0.1:44561/`: 200 OK
+  - `curl -I http://127.0.0.1:44561/assets/mentor-appraiser.generated.png`: 200 OK / image/png
+  - `node --check app.js && node --check scripts/generate-image-assets.mjs && node --check scripts/persona-score-check.mjs`: passed
+  - `npm run test:persona`: persona_average=100.0
+  - `npm run test:e2e`: 13 passed
+  - `npx playwright screenshot --browser=chromium --viewport-size=1440,1000 http://127.0.0.1:44561/ /tmp/appraisal-detective-95-title.png`: captured
+  - `/tmp/appraisal-detective-95-intake.png`: captured by Playwright scripted case003 intake flow
+  - `/tmp/appraisal-detective-95-field.png`: captured by Playwright scripted case003 field survey flow
+- 再調整レビュー反映後:
+  - `curl -I http://127.0.0.1:44561/`: 200 OK
+  - `curl -I http://127.0.0.1:44561/styles.css`: 200 OK
+  - `curl -I http://127.0.0.1:44561/assets/fonts/NotoSansJP-VF.ttf`: 200 OK / font/ttf
+  - `node --check app.js && node --check scripts/persona-score-check.mjs`: passed
+  - `npm run test:persona`: persona_average=100.0
+  - `npm run test:e2e`: 17 passed
+  - `/tmp/appraisal-detective-p95-rebalanced-title-fixed.png`: captured
+  - `/tmp/appraisal-detective-p95-rebalanced-field-fixed.png`: captured
+  - `/tmp/appraisal-detective-p95-rebalanced-learning-fixed.png`: captured
+- 低刺激レビュー反映後:
+  - `flashEvidence()` は低刺激モード時に `evidence-flash` を適用せず、証拠ボードの揺れを抑えるようにした。
+  - `#stimulus-toggle` に `aria-label` / `aria-describedby` / `title` を追加し、圧フラッシュ、すべての効果音、証拠ボード揺れを抑えるトグルだと支援技術にも伝わるようにした。
+  - `head` の最小インラインスクリプトで `prefers-reduced-motion` / 保存済み低刺激設定を先に判定し、初回描画前の `low-stimulus-boot` とボタン表示を同期するようにした。
+  - 低刺激設定の `localStorage` キーは `meta[name="appraisal-low-stimulus-storage-key"]` に寄せ、HTMLブート処理と `app.js` が同じ値を読むようにした。
+  - `node --check app.js && node --check scripts/persona-score-check.mjs`: passed
+  - `npm run test:persona`: persona_average=100.0
+  - `npm run test:e2e`: 17 passed
+  - `npx playwright screenshot --browser=chromium --viewport-size=1440,1000 http://127.0.0.1:44561/ /tmp/appraisal-detective-low-stimulus-boot.png`: captured
+- ノベルADV 1週間改善プラン反映後:
+  - `node --check app.js`: passed
+  - `node --check tests/appraisal-detective-flow.spec.js`: passed
+  - `node --check tests/phase-two-screenshot.spec.js`: passed
+  - `node --check tests/phase-two-visual.spec.js`: passed
+  - `npm run test:e2e -- --grep "market scenario|phase two"`: 3 passed
+  - `npm run test:e2e`: 39 passed
+  - `npm run test:persona`: persona_average=100.0
+  - `npm run test:production`: production_server_checks=passed
+- 机上事件ファイル選択UI反映後:
+  - `node --check app.js && node --check tests/appraisal-detective-flow.spec.js`: passed
+  - `npm run test:e2e -- --grep "reduced motion preference|novel scene advances"`: 2 passed
+  - `npm run test:e2e`: 39 passed
+  - `npm run test:persona`: persona_average=100.0
+  - `npm run test:production`: production_server_checks=passed
+  - `/tmp/appraisal-detective-case-file-desk.png`: 机上の3枚ファイル選択画面を撮影
+- 新人鑑定士ポートレート反映後:
+  - `node scripts/generate-image-assets.mjs`: `assets/player-novice-appraiser.generated.png` generated
+  - `node --check app.js && node --check scripts/generate-image-assets.mjs && node --check scripts/persona-score-check.mjs && node --check tests/appraisal-detective-flow.spec.js`: passed
+  - `npm run test:e2e -- --grep "novel scene advances|serves ImageGen-generated|persona"`: 2 passed
+  - `npm run test:persona`: persona_average=100.0
+  - `npm run test:production`: production_server_checks=passed
+  - `npm run test:e2e`: 39 passed
+  - `/tmp/appraisal-detective-novice-appraiser-intro.png`: 新人鑑定士と先輩鑑定士のタイトルシーンを撮影
+- フェーズ本体のゲーム画面内収容後:
+  - `node --check app.js && node --check tests/appraisal-detective-flow.spec.js`: passed
+  - `npm run test:e2e -- --grep "intake phase shows|novel scene advances|complete case001 normal review"`: 3 passed
+  - `npm run test:e2e`: 39 passed
+  - `npm run test:persona`: persona_average=100.0
+  - `npm run test:production`: production_server_checks=passed
+  - `/tmp/appraisal-detective-operation-intake.png`: 受任面談が暗いゲーム操作画面内に収まっていることを撮影
+  - `/tmp/appraisal-detective-operation-field.png`: 現地調査がゲーム操作画面内に収まっていることを撮影
+  - `/tmp/appraisal-detective-operation-documents.png`: 資料照合がゲーム操作画面内に収まっていることを撮影
+- 受任面談の表示タイミングと最有効使用文言修正後:
+  - `node --check app.js && node --check case-data.js && node --check tests/appraisal-detective-flow.spec.js`: passed
+  - `npm run test:e2e -- --grep "novel scene advances|intake phase shows"`: 2 passed
+  - `npm run test:e2e`: 39 passed
+  - `npm run test:persona`: persona_average=100.0
+  - `npm run test:production`: production_server_checks=passed
+  - `/tmp/appraisal-detective-intake-story-after-fix.png`: 会話中は受任面談操作盤が非表示であることを撮影
+  - `/tmp/appraisal-detective-intake-revealed-after-fix.png`: 会話完了後に受任面談操作盤が表示されることを撮影
+- オーバーレイ演出の一瞬表示バグ調査後:
+  - `証拠取得`、`証拠提示`、`学びカード` は長く残る読ませるカードにせず、初期に近い短いポップアップ時間へ戻した。
+  - 短時間化でカード表示が唐突にならないよう、`evidence-pop` / `evidence-slam` のフェードイン区間を長めに取り、移動量と拡大を抑えた。
+  - さらに `evidence-pop` / `evidence-slam` の立ち上がりを 46-52% 付近まで緩め、初期に近い徐々に浮かぶフェードインへ寄せた。
+  - 案件選択では、選んだ事件ファイルが中央へ寄ったあと一拍残るように遷移待ちを調整した。UA分岐ではなく選択ファイルの `transform` `transitionend` を待ってから保持時間を開始し、Chrome/Firefoxの体感差を抑えるようにした。
+  - 選ばれなかったファイルには位置ごとの `transition-delay` を付け、同時に消える通知的な見え方から、紙が順に散る見え方へ寄せた。
+  - overlay系カードは新しいカード表示前に前回カードを即除去し、短い表示時間でもDOM上で重ならないようにした。
+  - `prefers-reduced-motion` では結果ランク印影の `rank-seal` が透明初期状態で止まらないよう、明示的に表示状態へ固定した。
+  - 証拠カード取得/選択時に右側の証拠ボード全体が一瞬拡大する `board-pop` 演出を削除した。証拠取得ポップアップと状態クラスは残し、サイドパネル自体は動かさない。
+  - `圧力フラッシュ`、`証拠ボードの軽い脈動`、`先輩メモ更新` は状態フィードバックとして 1.2 秒で完了するように分離した。
+  - reduced-motion / 低刺激モードでは演出を抑えても、証拠カードや学びカードの内容自体は即消えないようにした。
+  - `node --check app.js && node --check tests/appraisal-detective-flow.spec.js`: passed
+  - `npm run test:e2e -- --grep "compact popup timing|state cues|reduced motion keeps overlay|low stimulus toggle"`: 4 passed
+  - `npm run test:e2e -- --grep "card popup animation|compact popup timing"`: 2 passed
+  - `npm run test:e2e`: 42 passed
+  - `npm run test:e2e`: 43 passed
+  - `npm run test:persona`: persona_average=100.0
+  - `npm run test:production`: production_server_checks=passed
+  - `npm run test:e2e -- --grep "overlays are announced|evidence and learning overlays|reduced motion keeps overlay|learning cards use"`: 4 passed
+  - `npm run test:e2e`: 41 passed
+  - `npm run test:persona`: persona_average=100.0
+  - `npm run test:production`: production_server_checks=passed
+- Claude Code辛口レビューのブロッカー対応後:
+  - `node --check boot.js && node --check app.js && node --check scripts/serve-production.mjs && node --check scripts/verify-production-server.mjs && node --check scripts/persona-score-check.mjs`: passed
+  - `npm run test:production`: production_server_checks=passed
+  - `npm run test:persona`: persona_average=100.0
+  - `npm run test:e2e`: 22 passed
+- `curl -I http://127.0.0.1:44561/`: 200 OK
+- `curl -I http://127.0.0.1:44561/boot.js`: 200 OK
+- case-data分離・固有メカニクス・スコア分散反映後:
+  - `curl -I http://127.0.0.1:44561/`: 200 OK
+  - `curl -I http://127.0.0.1:44561/case-data.js`: 200 OK
+  - `node --check case-data.js && node --check app.js && node --check scripts/persona-score-check.mjs`: passed
+  - `npm run test:persona`: persona_average=100.0
+  - `npm run test:production`: production_server_checks=passed
+  - `npm run test:e2e`: 25 passed
+- 差分再レビューv2の1日タスク反映後:
+  - `curl -I http://127.0.0.1:44561/`: 200 OK
+  - `curl -I http://127.0.0.1:44561/case-data.js`: 200 OK
+  - `node --check app.js && node --check case-data.js && node --check scripts/persona-score-check.mjs`: passed
+  - `npm run test:persona`: persona_average=100.0
+  - `npm run test:production`: production_server_checks=passed
+  - `npm run test:e2e -- --grep "missing case data|learning cards use|overlays are announced|low stimulus toggle|case-specific document|dummy document"`: 6 passed
+  - `npm run test:e2e`: 27 passed
+- 差分再レビューv2の3日タスク反映後:
+  - `curl -I http://127.0.0.1:44561/`: 200 OK
+  - `curl -I http://127.0.0.1:44561/case-data.js`: 200 OK
+  - `node --check boot.js && node --check case-data.js && node --check app.js && node --check scripts/persona-score-check.mjs && node --check scripts/serve-production.mjs && node --check scripts/verify-production-server.mjs`: passed
+  - `npm run test:persona`: persona_average=100.0
+  - `npm run test:production`: production_server_checks=passed
+  - `npm run test:e2e -- --grep "play timer|numeric document mechanic|normal result exposes|complete case001 normal|complete case002 normal|complete case003 normal"`: 7 passed
+  - `npm run test:e2e -- --grep "bad judgment path"`: 1 passed
+- 差分再レビューv2の1週間タスク反映後:
+  - `curl -I http://127.0.0.1:44561/`: 200 OK
+  - `curl -I http://127.0.0.1:44561/case-data.js`: 200 OK
+  - `curl -I http://127.0.0.1:44561/scoring.js`: 200 OK
+  - `node --check boot.js && node --check case-data.js && node --check scoring.js && node --check app.js && node --check scripts/persona-score-check.mjs && node --check scripts/serve-production.mjs && node --check scripts/verify-production-server.mjs`: passed
+  - `npm run test:persona`: persona_average=100.0
+  - `npm run test:production`: production_server_checks=passed
+  - `npm run test:e2e`: 36 passed
+- 95点ゴール継続 / 根拠連動・リプレイ変数反映後:
+  - `curl -I http://127.0.0.1:44561/`: 200 OK
+  - `curl -I http://127.0.0.1:44561/case-data.js`: 200 OK
+  - `curl -I http://127.0.0.1:44561/scoring.js`: 200 OK
+  - `node --check boot.js && node --check case-data.js && node --check scoring.js && node --check app.js && node --check scripts/persona-score-check.mjs && node --check scripts/serve-production.mjs && node --check scripts/verify-production-server.mjs && node --check tests/appraisal-detective-flow.spec.js`: passed
+  - `npm run test:persona`: persona_average=100.0
+  - `npm run test:production`: production_server_checks=passed
+  - `npm run test:e2e`: 37 passed
+- ノベルゲーム調への作り直し後:
+  - `node --check app.js && node --check scripts/persona-score-check.mjs && node --check tests/appraisal-detective-flow.spec.js`: passed
+  - `npm run test:persona`: persona_average=100.0
+  - `npm run test:production`: production_server_checks=passed
+  - `npm run test:e2e`: 38 passed
+  - `curl -I http://127.0.0.1:44561/`: 200 OK
+  - `npx playwright screenshot --browser=chromium --viewport-size=1440,1000 http://127.0.0.1:44561/ /tmp/appraisal-detective-novel-desktop.png`: captured
+  - `npx playwright screenshot --browser=chromium --viewport-size=390,900 http://127.0.0.1:44561/ /tmp/appraisal-detective-novel-mobile.png`: captured
+- BGM追加:
+  - Mixkit Stock Music Free License の音源を `assets/audio/` にローカル保存し、場面別に切り替える。
+  - 案件選択 / 結果: `mixkit-echoes-188.mp3`
+  - 現地調査 / 資料照合 / 鑑定判断: `mixkit-tapis-615.mp3`
+  - 報告・対決: `mixkit-piano-horror-671.mp3`
+  - 出典・ライセンス記録: `docs/third-party-audio-notices.md`
+  - `curl -I http://127.0.0.1:44561/assets/audio/mixkit-echoes-188.mp3`: 200 OK / audio/mpeg
+  - `curl -I http://127.0.0.1:44561/assets/audio/mixkit-tapis-615.mp3`: 200 OK / audio/mpeg
+  - `curl -I http://127.0.0.1:44561/assets/audio/mixkit-piano-horror-671.mp3`: 200 OK / audio/mpeg
+  - `node --check app.js && node --check tests/appraisal-detective-flow.spec.js && node --check scripts/serve-production.mjs && node --check scripts/verify-production-server.mjs`: passed
+  - `npm run test:e2e -- --grep "BGM|serves local BGM|SE toggle|reduced motion"`: 5 passed
+  - `npm run test:e2e`: 48 passed
+  - `npm run test:persona`: persona_average=100.0
+  - `npm run test:production`: production_server_checks=passed
+- BGMトグル文言の明確化:
+  - `BGM ON/OFF` を廃止し、状態表示を `BGM 待機中` / `BGM 再生中` / `BGM 停止中` / `BGM 低刺激で停止` に変更。
+- 案件難度とチュートリアル強化:
+  - 案件001を `イージー` として、各フェーズに専門用語・見方・次の一手を示すチュートリアルカードを追加。
+  - 案件002を `ノーマル` として、収益物件の純収益、還元利回り、DCR、レントロールの補助メモを追加。
+  - 案件003を `ハード` として、現行の上級編構成を維持。
+  - `node --check case-data.js && node --check app.js && node --check tests/appraisal-detective-flow.spec.js`: passed
+  - `npm run test:e2e -- --grep "case files expose|tutorial guidance|case001 and case002|complete case001 normal|complete case002 normal|complete case003 normal"`: 6 passed
+  - `npm run test:e2e`: 51 passed
+  - `npm run test:persona`: persona_average=100.0
+  - `npm run test:production`: production_server_checks=passed
+- 事件ファイル選択演出の復帰:
+  - 低刺激モードでは効果音だけを抑え、事件ファイルが中央へ寄る視覚演出は維持する。
+  - `prefers-reduced-motion: reduce` は従来通り即時遷移にして、OS側の視差削減を優先する。
+- イージーモード現地調査の文言重複整理:
+  - ダミースポットの学びカード見出しを `価格形成要因の選別` から `評価根拠の選別` へ変更。
+  - 先輩メモには同じ lesson を全文重複表示せず、学びカードへ誘導する短文にした。
+- カード選択演出の復帰:
+  - 低刺激モードでも証拠取得・証拠提示・学びカードの中央ポップアップ演出は維持する。
+  - 低刺激で抑える対象は、効果音、圧力フラッシュ、証拠ボードの脈動に限定する。
+- リファクタリング:
+  - コメントアウト行を削除し、テスト内で重複していた `revealStory` / `startCase` / `advancePhase` を `tests/helpers.js` に集約。
+  - 未使用関数候補と非表示UIを確認。`[hidden]`、`sr-only`、低刺激用 `body::after` 非表示、ノベル進行ゲートは実動・アクセシビリティ用途のため維持。

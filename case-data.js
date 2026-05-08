@@ -455,7 +455,7 @@ caseMechanics: {
         detail: "181.81平方メートルを坪換算し、依頼者説明との差を面積不一致として扱う。",
         correct: true,
         scores: { reasoning: 6, appraisal: 4 },
-        mentor: "対象不動産の確定が先だ。地積差は比準価格にも倫理判断にも効く。",
+        mentor: "対象不動産の確定が先だ。地積差は比準価格にも裁量判断にも効く。",
       },
       {
         id: "clientArea",
@@ -491,7 +491,7 @@ caseMechanics: {
         detail: "3階空室と修繕費を反映し、DCRが薄い前提を利回り判断へ戻す。",
         correct: true,
         scores: { reasoning: 7, appraisal: 5 },
-        mentor: "収益価格は融資希望額ではない。安定純収益で返済余裕を検算できた。",
+        mentor: "融資目的は聞く。ただし収益価格は安定純収益で返済余裕を検算して説明する。",
       },
       {
         id: "fullOccupancy",
@@ -571,6 +571,12 @@ caseDefinitions: {
       portrait: "./assets/tanaka-client.generated.png",
       portraitClass: "portrait-tanaka",
       tension: "相続で妹を説得したい兄。高め誘導は弱い声で始まり、報告時に強くなる。",
+      gameplayLines: {
+        field: "古い家なのは分かっています。でも、思い出まで減点されるんですか。",
+        documents: "面積や名義の話、妹にどう説明すればいいんでしょう。",
+        appraisal: "低く出ると、妹との話し合いが崩れます。根拠の範囲で上側に見られませんか。",
+        report: "せめて兄妹で揉めない言い方にできませんか。",
+      },
     },
     evidenceIds: [
       "pricePoint",
@@ -684,7 +690,7 @@ caseDefinitions: {
     tutorials: {
       0: {
         title: "まず覚えること",
-        body: "鑑定士は依頼者の希望額を作る仕事ではない。最初に価格時点、対象不動産、価格の種類を固定する。",
+        body: "鑑定士は依頼者の事情を聞いたうえで、説明できる価格の幅を判断する。最初に価格時点、対象不動産、価格の種類を固定する。",
         terms: ["価格時点: いつの価格か", "対象不動産の確定: 何を評価するか", "正常価格: 通常の市場で成立する価格"],
         next: "この面談では「正常価格として受任」を選ぶのが基本。",
       },
@@ -737,6 +743,12 @@ caseDefinitions: {
       portrait: "./assets/saeki-client.generated.png",
       portraitClass: "portrait-saeki",
       tension: "借換融資を通したい不動産会社担当。利回りを低く見せる誘導をかける。",
+      gameplayLines: {
+        field: "空室はたまたまです。駅前立地の強さも見てください。",
+        documents: "銀行には、安定したビルだと伝わる資料にしたいんです。",
+        appraisal: "利回りひとつで評価額がかなり変わりますよね。説明できる範囲で低めに置けませんか。",
+        report: "借換がかかっているので、弱く見える表現は避けたいです。",
+      },
     },
     evidenceIds: [
       "incomePricePoint",
@@ -903,6 +915,12 @@ caseDefinitions: {
       portrait: "./assets/kurokawa-client.generated.png",
       portraitClass: "portrait-kurokawa",
       tension: "地権者をまとめたい開発会社代表。最大容積案を既成事実にしようとする。",
+      gameplayLines: {
+        field: "今は古い街並みでも、計画後の姿を見てください。",
+        documents: "行政協議は進めます。ここで弱く見られると地権者が動きません。",
+        appraisal: "14階案を切ると事業性が全然変わるんです。可能性は残せませんか。",
+        report: "最大容積を諦めたように読める評価書は困ります。",
+      },
     },
     evidenceIds: [
       "redevelopmentPricePoint",

@@ -524,7 +524,7 @@ function phaseObjective() {
   if (state.phase === 1) return `${guidePrefix}写真から違和感を3か所以上発見すると資料照合へ進める。監査は5/5が目標。`;
   if (state.phase === 2) return `${guidePrefix}資料の矛盾を2件以上照合すると鑑定判断へ進める。`;
   if (state.phase === 3) return "査定方式、リスク反映、調整幅、調整根拠2枚を選び、価格判断を固める。";
-  return "証拠3枚、再反論、反論根拠カード、最後の倫理判断を選ぶ。";
+  return "証拠3枚、再反論、反論根拠カード、最後の裁量判断を選ぶ。";
 }
 
 function tutorialMarkup() {
@@ -612,6 +612,7 @@ function showPhaseCutIn(nextPhase) {
 function gameplayCastMarkup(key) {
   const reactions = gameplayCast.gameplayCastReactions(key, {
     client: currentCase().client,
+    caseInfo: currentCase(),
     scenario: activeMarketScenario(),
     found: activeHotspots().filter((spot) => state.evidence.includes(spot.id)).length,
     selectedDocs: state.selectedDocs.size,
@@ -765,7 +766,7 @@ function phaseStoryLines() {
       { speaker: "client", name: client.name, line: "その根拠で、本当にその評価額になるんですか。" },
       { speaker: "player", name: "新人鑑定士", line: "はい。提示する三枚で、事実、分析、結論の順に説明します。" },
       repeatLine,
-      { speaker: "mentor", name: "先輩鑑定士", line: "反論には、言葉ではなく根拠で返せ。最後に中立性を選べ。" },
+      { speaker: "mentor", name: "先輩鑑定士", line: "反論には、言葉ではなく根拠で返せ。最後は説明可能な裁量の範囲に収めろ。" },
     ],
   };
   return (linesByPhase[state.phase] ?? []).filter(Boolean);
@@ -1042,7 +1043,10 @@ function productPanelContent(panel, entries, totalCompletions) {
     <div class="product-list">
       <div><strong>企画・実装</strong><span>Appraisal Detective prototype team</span></div>
       <div><strong>鑑定評価監修メモ</strong><span>不動産鑑定評価基準の用語・評価プロセスをゲーム向けに再構成</span></div>
-      <div><strong>音源・画像</strong><span>ローカル同梱アセット、生成画像、フリーBGM素材</span></div>
+      <div><strong>画像</strong><span>一部の現地調査背景と依頼者ポートレートは、開発中にOpenAI画像生成モデルで作成した事前生成アセットです。</span></div>
+      <div><strong>実行中AI生成</strong><span>なし。ゲームプレイ中にプレイヤー入力から画像、音声、会話、文章を生成しません。</span></div>
+      <div><strong>音源</strong><span>ローカル同梱BGM素材。詳細は docs/third-party-audio-notices.md に記録。</span></div>
+      <div><strong>素材台帳</strong><span>生成画像は assets-manifest.json で caseId、用途、altText、sha256、AI開示区分を管理。</span></div>
       <p>これは教育用ゲームであり、実際の鑑定評価書・価格意見ではない。</p>
     </div>
   `;
@@ -1070,7 +1074,7 @@ function caseReplayGoal(info, record = normalizeRecord()) {
     return "次周目標: 今回シナリオの重点証拠を報告3枚に全反映する。";
   }
   if ((record.bestAudit ?? 0) < 85) {
-    return info.replayGoal ?? "次周目標: 監査レビューで重要根拠3枚と中立性を同時に満たす。";
+    return info.replayGoal ?? "次周目標: 監査レビューで重要根拠3枚と説明可能な裁量を同時に満たす。";
   }
   if ((record.bestNormal ?? 0) < 90 && (record.bestAudit ?? 0) < 90) {
     return "次周目標: 同じ結論を別の3枚で支え、90点以上の論証を作る。";
@@ -1206,7 +1210,7 @@ function renderIntake() {
         professionalTitle: "正常価格として受任し、価格時点と対象不動産を固定する",
         professionalDetail: "融資希望額ではなく、収益資料と市場利回りから収益価格を検討する。",
         pressureTitle: "依頼者提示の利回りを参考にして進める",
-        pressureDetail: "銀行評価には近づくが、還元利回りの中立性が崩れる。",
+        pressureDetail: "銀行評価には近づくが、還元利回りの説明可能な範囲を外れる。",
       }
     : {
         chip: "依頼目的",
@@ -1222,9 +1226,9 @@ function renderIntake() {
           "依頼者圧力: 高め誘導の可能性",
         ],
         professionalTitle: "正常価格として受任し、価格時点と対象不動産を固定する",
-        professionalDetail: "鑑定士としての独立性を守り、調査前に前提条件を明確にする。",
+        professionalDetail: "鑑定士として説明可能な裁量を守り、調査前に前提条件を明確にする。",
         pressureTitle: "依頼者の希望額を参考にして進める",
-        pressureDetail: "依頼者満足は高いが、鑑定評価額の中立性が崩れる。",
+        pressureDetail: "依頼者満足は高いが、鑑定評価額の説明可能な範囲を外れる。",
       });
   view.innerHTML = `
     ${activeNovelSceneMarkup()}
@@ -1745,6 +1749,7 @@ function renderAppraisal() {
             .map((band) => choiceButton("adjustment-band", band.id, band.label, band.detail))
             .join("")}
         </div>
+        ${discretionRangeMarkup(adjustmentBands)}
         ${state.adjustmentBand ? adjustmentSupportMarkup() : ""}
       </article>
     </div>
@@ -1858,6 +1863,69 @@ function renderAppraisal() {
   });
 }
 
+function discretionRangeMarkup(adjustmentBands = activeAdjustmentBands()) {
+  const selected = selectedAdjustmentBand();
+  const scenario = activeMarketScenario();
+  const chosenIndex = selected
+    ? Math.max(0, adjustmentBands.findIndex((band) => band.id === selected.id))
+    : -1;
+  const markerPosition = chosenIndex >= 0 && adjustmentBands.length > 1
+    ? Math.round((chosenIndex / (adjustmentBands.length - 1)) * 100)
+    : 50;
+  const markerClass = chosenIndex < 0 ? "unset" : `pos-${Math.min(4, chosenIndex)}`;
+  const selectedSupport = selected?.supportEvidence ?? [];
+  const supportLabels = selectedSupport
+    .slice(0, 4)
+    .map((id) => evidenceCatalog[id]?.term ?? id);
+  const scenarioLabels = (scenario?.supportEvidence ?? [])
+    .slice(0, 3)
+    .map((id) => evidenceCatalog[id]?.term ?? id);
+  const selectedLabel = selected
+    ? `${selected.label} / ${selected.correct ? "説明可能レンジ内" : "監査で説明補強が必要"}`
+    : "未選択 / まず調整幅を選ぶ";
+  const warning = selected
+    ? selected.correct
+      ? "この幅は、取得済み資料と市場条件で説明できる裁量範囲です。依頼者要望へ配慮しても、根拠が先に立ちます。"
+      : "この幅を採るなら、根拠不足や希望額逆算に見えないよう追加説明が必要です。"
+    : "裁量は自由な値付けではありません。下限・上限の間で、根拠カードと市場条件に支えられる位置を選びます。";
+
+  return `
+    <section class="discretion-meter" aria-label="説明可能な裁量レンジ">
+      <div class="discretion-meter-head">
+        <span class="term-chip">説明可能な裁量レンジ</span>
+        <strong>${htmlText(selectedLabel)}</strong>
+      </div>
+      <div class="discretion-track" role="img" aria-label="下限寄りから上限寄りまでの調整幅。現在位置 ${htmlAttr(String(markerPosition))}%">
+        <span>下限寄り</span>
+        <i class="discretion-marker-${htmlAttr(markerClass)}"></i>
+        <span>上限寄り</span>
+      </div>
+      <div class="discretion-range-options">
+        ${adjustmentBands
+          .map(
+            (band) => `
+              <span class="${selected?.id === band.id ? "current" : ""}">
+                ${htmlText(band.label)}
+              </span>
+            `,
+          )
+          .join("")}
+      </div>
+      <p>${htmlText(warning)}</p>
+      <dl>
+        <div>
+          <dt>支える根拠</dt>
+          <dd>${htmlText(supportLabels.length ? supportLabels.join(" / ") : "調整幅を選ぶと表示")}</dd>
+        </div>
+        <div>
+          <dt>今回条件</dt>
+          <dd>${htmlText(scenario ? `${scenario.title}: ${scenarioLabels.join(" / ")}` : "標準条件")}</dd>
+        </div>
+      </dl>
+    </section>
+  `;
+}
+
 function adjustmentSupportMarkup() {
   const band = selectedAdjustmentBand();
   const available = state.evidence
@@ -1904,7 +1972,7 @@ function reportMissingSteps() {
   if (state.selectedReport.size < 3) missing.push(`証拠カードをあと${3 - state.selectedReport.size}枚選ぶ`);
   if (!state.rebuttalChoice) missing.push("再反論を選ぶ");
   if (state.rebuttalChoice && !state.rebuttalEvidence) missing.push("反論根拠カードを選ぶ");
-  if (!state.ethicsChoice) missing.push("倫理判断を選ぶ");
+  if (!state.ethicsChoice) missing.push("裁量判断を選ぶ");
   return missing;
 }
 
@@ -1943,16 +2011,20 @@ function renderReport() {
     ? "住民説明は後回しでいいので、14階案を前提にしてください。ここで低く出ると地権者がまとまりません。"
     : isIncomeCase
     ? "銀行評価を通すため、還元利回りは4%台で見せたいんです。ここだけ少し丸められませんか。"
-    : "妹にはこの家の価値を高く見せたいんです。先生の一言で丸く収まります。");
+    : "妹にはこの家の価値を高く見せたいんです。根拠の範囲で、上側に説明できる余地はありませんか。");
   const mentorPressure = currentCase().reportPressure?.mentor ?? (isRedevelopmentCase
-    ? "最有効使用は政治的な予定表じゃない。法規制、権利調整、市場性を説明しろ。"
+    ? "計画を聞くのは実務だ。ただし最有効使用は、法規制、権利調整、市場性で説明できる範囲に収めろ。"
     : isIncomeCase
-    ? "収益価格は融資希望額の道具じゃない。純収益と利回りを説明しろ。"
-    : "鑑定評価額は交渉カードじゃない。君の判断を示せ。");
+    ? "借換目的は評価目的として聞く。ただし収益価格は、純収益と利回りで説明できる範囲に収めろ。"
+    : "依頼者の事情は評価目的を理解する材料だ。最後は説明可能な裁量として君の判断を示せ。");
   const reportIds = Array.from(state.selectedReport);
   const rebuttal = clientRebuttal(reportIds);
   const scenario = activeMarketScenario();
-  const clientPressure = scenarioEngine.scenarioClientDemand(scenario, baseClientPressure);
+  const scenarioIndex = (currentCase().marketScenarios ?? []).findIndex((item) => item.id === scenario?.id);
+  const clientPressure = scenarioEngine.scenarioClientDemand(scenario, baseClientPressure, {
+    caseInfo: currentCase(),
+    scenarioIndex,
+  });
 
   view.innerHTML = `
     ${state.termBurst ? `<div class="term-burst">${htmlText(state.termBurst)}</div>` : ""}
@@ -1971,7 +2043,7 @@ function renderReport() {
                 .join(" / ")}</span></div>`
             : ""
         }
-        <div class="phase-checkline">終了条件: 証拠3枚 + 再反論 + 反論根拠 + 倫理判断 / 現在 ${htmlText(selectedCount)}/3 ${state.rebuttalChoice ? "再反論済み" : "再反論未選択"} ${state.rebuttalEvidence ? "根拠済み" : "根拠未選択"} ${state.ethicsChoice ? "判断済み" : "倫理未選択"}</div>
+        <div class="phase-checkline">終了条件: 証拠3枚 + 再反論 + 反論根拠 + 裁量判断 / 現在 ${htmlText(selectedCount)}/3 ${state.rebuttalChoice ? "再反論済み" : "再反論未選択"} ${state.rebuttalEvidence ? "根拠済み" : "根拠未選択"} ${state.ethicsChoice ? "判断済み" : "裁量未選択"}</div>
         <div class="selected-evidence report-stack">
           ${reportIds
             .map((id, index) => reportEvidenceMarkup(id, index))
@@ -1985,20 +2057,20 @@ function renderReport() {
         ${selectedCount === 3 ? rebuttalOptionsMarkup(reportIds) : ""}
       </article>
       <article class="brief-card urgent">
-        <span class="term-chip">独立性・中立性</span>
-        <h3>依頼者からの最後の圧力</h3>
+        <span class="term-chip">説明可能な裁量</span>
+        <h3>依頼者要望への応答</h3>
         <div class="dialogue">
           ${speakerMarkup("client", client, clientPressure, { pressure: true })}
           ${speakerMarkup("mentor", {}, mentorPressure)}
         </div>
         <div class="phase-actions">
           <button class="option-button ${state.ethicsChoice === "neutral" ? "selected" : ""}" data-ethics="neutral">
-            <strong>中立性を守り、根拠に基づく価格レンジを報告する</strong>
-            <span>依頼者満足は下がるが、鑑定士としての説明責任を果たす。</span>
+            <strong>根拠の範囲で、依頼目的に沿う説明可能な評価にする</strong>
+            <span>鑑定士の裁量はある。価格形成要因で支えられる範囲内で、依頼者要望への説明を組む。</span>
           </button>
           <button class="option-button ${state.ethicsChoice === "yield" ? "selected" : ""}" data-ethics="yield">
-            <strong>依頼者の希望に寄せた表現にする</strong>
-            <span>短期的には揉めにくいが、鑑定評価の独立性を失う。</span>
+            <strong>根拠を超えて希望額へ合わせる</strong>
+            <span>短期的には揉めにくいが、説明可能な裁量を超えると評価書の信頼性を失う。</span>
           </button>
         </div>
       </article>
@@ -2018,28 +2090,28 @@ function renderReport() {
         award("ethics-neutral", { ethics: 18, appraisal: 4 });
         mentor(
           isRedevelopmentCase
-            ? "独立性を守った。開発期待と最有効使用を切り離し、実現可能性で説明できれば強い。"
+            ? "説明可能な裁量に収めた。開発期待は聞き、最有効使用は実現可能性で説明する。"
             : isIncomeCase
-            ? "独立性を守った。融資希望額と収益価格を切り離し、純収益と還元利回りで説明できれば強い。"
-            : "独立性を守った。依頼者に不都合な結論でも、根拠を説明できれば鑑定評価として強い。",
+            ? "説明可能な裁量に収めた。融資目的は理解し、純収益と還元利回りで上限を説明する。"
+            : "説明可能な裁量に収めた。依頼者の事情を聞いたうえで、根拠で支えられる価格レンジを示せている。",
         );
       } else {
         award("ethics-yield", { ethics: -18, appraisal: -4 });
         showLearningCard(
-          "独立性・中立性",
+          "説明可能な裁量",
           isRedevelopmentCase
-            ? "開発会社の最大容積案に寄せると、正常価格ではなく利害調整用の価格に近づく。"
+            ? "開発会社の最大容積案を根拠化せず採ると、正常価格ではなく利害調整用の価格に近づく。"
             : isIncomeCase
-            ? "融資希望額に合わせると、収益価格が市場賃料・必要諸経費・還元利回りから切り離される。"
-            : "相続交渉の都合に寄せると、鑑定評価額が依頼者の交渉カードになってしまう。",
+            ? "融資希望額に合わせて利回りを置くと、収益価格が市場賃料・必要諸経費・還元利回りから切り離される。"
+            : "相続交渉の都合だけで価格を置くと、鑑定評価額が依頼者の交渉カードになってしまう。",
         );
         flashPressure();
         mentor(
           isRedevelopmentCase
-            ? "依頼者の最大容積案に寄せる判断は、職業倫理と最有効使用判定の信頼性を損なう。"
+            ? "根拠を超えて最大容積案に寄せる判断は、職業倫理と最有効使用判定の信頼性を損なう。"
             : isIncomeCase
-            ? "依頼者の利回りに寄せる判断は、職業倫理と収益価格の信頼性を損なう。"
-            : "依頼者の希望に寄せる判断は、職業倫理と評価書の信頼性を損なう。",
+            ? "根拠を超えて依頼者の利回りに寄せる判断は、職業倫理と収益価格の信頼性を損なう。"
+            : "根拠を超えて依頼者の希望に寄せる判断は、職業倫理と評価書の信頼性を損なう。",
         );
       }
       renderReport();
@@ -2146,7 +2218,7 @@ function rebuttalResolutionMarkup(option, evidenceId) {
     ? `${evidence?.term ?? "根拠"}として「${evidence?.title ?? "提示済み証拠"}」を置きます。評価額は希望額ではなく、この前提から説明します。`
     : `提示したカードの接続が弱いです。反論された一点に直接刺さる根拠へ組み直します。`;
   const mentorLine = supported
-    ? "二往復目まで根拠で返せた。最後は中立性を崩さず、評価書の結論として閉じろ。"
+    ? "二往復目まで根拠で返せた。最後は説明可能な裁量の範囲で、評価書の結論として閉じろ。"
     : "反論の往復で崩れるなら、報告根拠の選び方に戻れ。強い三枚を組み直すんだ。";
   return `
     <div class="dialogue rebuttal-resolution" aria-label="報告対決 二往復目">
@@ -2262,6 +2334,7 @@ function renderResult() {
       </p>
       <p class="score-breakdown">経過時間 ${htmlText(formatDuration(elapsed))} / ${htmlText(timeAdjustment.label)}。${htmlText(variance.label)}</p>
       ${marketScenarioResultMarkup(scenarioStatus)}
+      ${alternativeEvidenceReviewMarkup(scenarioStatus)}
       ${replayTitleMarkup(replayTitles)}
       <p>${htmlText(reviewText(total, expertise))}</p>
       <section class="result-mentor-line">
@@ -2393,9 +2466,9 @@ function reviewChecklist(reportIds, challenge) {
           detail: "重要カードを1枚以上使うと、次周で狙うべき論証の芯が見える。",
         },
         {
-          label: "中立性",
+          label: "説明可能な裁量",
           passed: state.ethicsChoice === "neutral",
-          detail: "依頼者の希望から評価額を切り離したか。",
+          detail: "依頼者要望を、根拠で支えられる範囲内に収めたか。",
         },
       ];
   return challengePanel({ checks });
@@ -2421,7 +2494,7 @@ function replayBrief(total, scenarioStatus = marketScenarioStatus()) {
     state.challengeMode
       ? "次周目標: 監査3条件をすべて満たしたまま、提示カードの順序と説明の見え方を変える。"
       : total >= 85
-      ? "次周目標: 中立性を保ったまま、別の根拠3枚で同等ランクを狙う。"
+      ? "次周目標: 説明可能な裁量を保ったまま、別の根拠3枚で同等ランクを狙う。"
       : state.caseId === "case003"
       ? "次周目標: 現地調査を5/5にして、公法上の規制・権利調整・最有効使用を報告に絡める。"
       : state.caseId === "case002"
@@ -2443,7 +2516,7 @@ function replayBrief(total, scenarioStatus = marketScenarioStatus()) {
           ? `<p>${htmlText(`別解ルート候補: ${alternate.join("、")}。同じ結論を別の三枚で支えると、監査・リプレイ評価が伸びる。`)}</p>`
           : ""
       }
-      <p>${htmlText(currentCase().replayGoal ?? "スコア研究軸: 調査、論証構成、倫理、説明責任を別々に伸ばす。")}</p>
+      <p>${htmlText(currentCase().replayGoal ?? "スコア研究軸: 調査、論証構成、裁量説明、説明責任を別々に伸ばす。")}</p>
     </section>
   `;
 }
@@ -2497,13 +2570,90 @@ function marketScenarioResultMarkup(status = marketScenarioStatus()) {
   `;
 }
 
+function alternativeEvidenceReviewMarkup(status = marketScenarioStatus()) {
+  const reportIds = Array.from(state.selectedReport);
+  const requiredReport = currentCase().requiredReport ?? [];
+  const requiredHits = requiredReport.filter((id) => reportIds.includes(id)).length;
+  const scenarioHits = status.reportHits?.length ?? 0;
+  const scenarioTotal = status.total ?? 0;
+  const foundHighValue = caseHighValueCards().filter((id) => state.evidence.includes(id));
+  const alternateIds = foundHighValue.filter((id) => !reportIds.includes(id)).slice(0, 3);
+  const riskIds = [
+    ...(status.supportEvidence ?? []),
+    ...requiredReport,
+  ].filter((id, index, list) => !reportIds.includes(id) && list.indexOf(id) === index).slice(0, 3);
+  const route =
+    scenarioTotal > 0 && scenarioHits >= Math.min(2, scenarioTotal) && requiredHits >= 2
+      ? {
+          level: "optimal",
+          label: "最適構成",
+          detail: "今回シナリオの重点証拠と重要カードが重なり、説明責任・監査リスクの両方に強い。",
+        }
+      : requiredHits >= 2 || scenarioHits >= 1
+      ? {
+          level: "acceptable",
+          label: "許容構成",
+          detail: "結論は説明可能。ただし市場シナリオまたは重要カードの一部を差し替えると、監査耐性が伸びる。",
+        }
+      : {
+          level: "risk",
+          label: "監査リスクあり",
+          detail: "三枚の根拠が今回条件と結論を支えきれていない。重点証拠か重要カードを入れ直したい。",
+        };
+
+  return `
+    <section class="alternative-route-panel route-${classToken(route.level)}" aria-label="代替証拠評価">
+      <div class="alternative-route-head">
+        <span class="term-chip">代替証拠評価</span>
+        <strong>${htmlText(route.label)}</strong>
+      </div>
+      <p>${htmlText(route.detail)}</p>
+      <div class="route-comparison-grid">
+        ${routeListMarkup("現在の三枚", reportIds, "今回の報告で依頼者へ提示した根拠。")}
+        ${routeListMarkup(
+          "別解候補",
+          alternateIds,
+          alternateIds.length
+            ? "同じ結論を別の三枚で支える研究候補。"
+            : "主要な高価値カードはすでに使えている。",
+        )}
+        ${routeListMarkup(
+          "監査リスク",
+          riskIds,
+          riskIds.length
+            ? "未提示のままだと監査コメントで突かれやすい根拠。"
+            : "重点根拠の提示漏れは少ない。",
+        )}
+      </div>
+    </section>
+  `;
+}
+
+function routeListMarkup(title, ids, fallback) {
+  return `
+    <div class="route-list">
+      <strong>${htmlText(title)}</strong>
+      ${
+        ids.length
+          ? `<ul>${ids.map((id) => routeItemMarkup(id)).join("")}</ul>`
+          : `<p>${htmlText(fallback)}</p>`
+      }
+    </div>
+  `;
+}
+
+function routeItemMarkup(id) {
+  const item = evidenceCatalog[id];
+  return `<li><em>${htmlText(item?.term ?? id)}</em><span>${htmlText(item?.title ?? id)}</span></li>`;
+}
+
 function replayTitleBadges({ total, expertise, elapsed, scenarioStatus }) {
   const titles = [];
   const mastery = scenarioStatus?.mastery ?? 0;
   if (mastery >= 1) titles.push("市場重点コンプリート");
   if (total >= 90 && expertise >= 80) titles.push("説明責任A+");
   if (state.challengeMode && total >= 90 && mastery >= 1) titles.push("監査厳格化候補");
-  if (state.ethicsChoice === "neutral" && state.score.ethics >= 80) titles.push("倫理監査S");
+  if (state.ethicsChoice === "neutral" && state.score.ethics >= 80) titles.push("裁量説明S");
   if (elapsed <= targetSeconds()) titles.push("速度鑑定");
   if (state.caseId === "case003" && total >= 90) titles.push("HBU審査官");
   return [...new Set(titles)];
@@ -2514,7 +2664,7 @@ function replayTitleMarkup(titles = []) {
     return `
       <section class="replay-title-strip pending">
         <span class="term-chip">周回称号</span>
-        <p>称号未取得。市場重点、説明責任、倫理、速度のいずれかを伸ばすと次周の狙いが見える。</p>
+        <p>称号未取得。市場重点、説明責任、裁量説明、速度のいずれかを伸ばすと次周の狙いが見える。</p>
       </section>
     `;
   }
@@ -2542,7 +2692,7 @@ function caseHighValueCards() {
 }
 
 function resultCelebrationText(finalGrade, total) {
-  if (finalGrade === "S") return "証拠の拾い方、調整理由、倫理判断が一本の鑑定ストーリーとして通った。";
+  if (finalGrade === "S") return "証拠の拾い方、調整理由、裁量判断が一本の鑑定ストーリーとして通った。";
   if (finalGrade === "A") return "結論は実務に耐える。次周は市場シナリオに合わせて三枚の根拠を組み替えたい。";
   if (total >= 70) return "評価の骨格はある。弱い根拠や再反論の不足を潰せば上位ランクが狙える。";
   return "現地、資料、判断の接続が切れている。先輩メモを頼りに、根拠の順序から組み直そう。";
@@ -2557,7 +2707,7 @@ function resultMentorLine(total, reportIds) {
     return "結論は崩れていない。ただ、根拠の順序を変えれば依頼者への刺さり方も変わる。";
   }
   if (state.ethicsChoice !== "neutral") {
-    return "依頼者に寄せた瞬間、根拠の強さが落ちた。中立性を最後の一手として守れ。";
+    return "根拠を超えて寄せた瞬間、説明の強さが落ちた。最後は説明可能な裁量の範囲に収めろ。";
   }
   return "拾った根拠が報告の三枚に変換しきれていない。現地、資料、判断のつながりを組み直せ。";
 }
@@ -2580,12 +2730,12 @@ function grade(value) {
 
 function reviewText(total, expertise) {
   if (total >= 80) {
-    return `専門用語を使った論証が成立している。鑑定評価額を依頼者の希望から切り離し、正常価格として説明できた。`;
+    return `専門用語を使った論証が成立している。依頼者要望を根拠で支えられる範囲に収め、正常価格として説明できた。`;
   }
   if (expertise < 65) {
     return `証拠は集めたが、鑑定評価の言葉で説明しきれていない。事情補正、個別的要因、試算価格の調整を根拠としてつなげよう。`;
   }
-  return `大筋は妥当だが、重要な根拠の見落としまたは倫理判断の弱さが残る。調査カードの集め方を変えて再鑑定してみよう。`;
+  return `大筋は妥当だが、重要な根拠の見落としまたは裁量説明の弱さが残る。調査カードの集め方を変えて再鑑定してみよう。`;
 }
 
 function resetCase(options = {}) {
@@ -2599,12 +2749,12 @@ function resetCase(options = {}) {
     state.caseId === "case003"
       ? "「最有効使用は依頼者の計画図ではない。合法性、物理的可能性、市場性、収益性を根拠で説明するんだ。」"
       : state.caseId === "case002"
-      ? "「収益価格は融資希望額ではない。純収益、必要諸経費、還元利回りを根拠で説明できる金額にするんだ。」"
-      : "「鑑定評価額は依頼者の希望額ではない。根拠を積み上げて説明できる金額にするんだ。」"
+      ? "「収益価格は融資希望額に近づける余地もある。だが、純収益、必要諸経費、還元利回りで説明できる金額に限る。」"
+      : "「依頼者の希望は聞け。だが、根拠を積み上げて説明できる金額に収めるんだ。」"
   );
   mentor(
     state.challengeMode
-      ? "監査レビュー開始。全現地論点を拾い、重要3カードで中立性を説明しきれ。"
+      ? "監査レビュー開始。全現地論点を拾い、重要3カードで説明可能な裁量を示しきれ。"
       : startMessage,
   );
   renderScore();

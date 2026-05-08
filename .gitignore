@@ -1,0 +1,10 @@
+node_modules/
+test-results/
+playwright-report/
+.claude/
+.omx/
+dist/
+assets/visual-refresh-baseline-2026-05-08/
+.env
+.env.*
+*.local

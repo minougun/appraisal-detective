@@ -92,7 +92,7 @@
         fieldImage: assetRefFromPath(spec.image),
         clientPortrait: spec.client?.portrait ? assetRefFromPath(spec.client.portrait) : portraitAssetForClass(spec.client?.portraitClass),
       },
-      client: spec.client,
+      client: clientWithGameplayLines(spec),
       intake: spec.intake,
       intakeEvidence: {
         pricePoint: ids.price,
@@ -124,6 +124,76 @@
       auditCriteria: spec.auditCriteria ?? makeAuditCriteria(spec, ids, spotIds, docIds),
       tutorials: spec.tutorials,
       replayGoal: spec.replayGoal,
+    };
+  }
+
+  function clientWithGameplayLines(spec) {
+    const client = spec.client ?? {};
+    if (client.gameplayLines) return client;
+    return {
+      ...client,
+      gameplayLines: manualClientGameplayLines(spec) ?? makeClientGameplayLines(spec),
+    };
+  }
+
+  function manualClientGameplayLines(spec) {
+    const lines = {
+      case004: {
+        field: "搬入口は動いています。でも、旧タンクの話を銀行に強く書かれると追加融資が止まります。",
+        documents: "土壌の概況報告は正式調査ではありません。担保余力まで下げる材料にされるんですか。",
+        appraisal: "浄化費用を最大に見ると資金繰りが詰まります。処分可能性の範囲で説明できませんか。",
+        report: "銀行には正常価格と担保リスクを分けて説明したい。数字だけ弱く見える書き方は避けたいんです。",
+      },
+      case005: {
+        field: "建物は普通に使えます。借地だと前面に出すと、買主に最初から値切られませんか。",
+        documents: "地主さんとは揉めていますが、昔からの関係です。承諾条項をそこまで重く見るんですか。",
+        appraisal: "普通の戸建てに近い見せ方はできませんか。権利の話だけで全部が弱く見えるのは困ります。",
+        report: "借地権だと強く言うと交渉が止まります。制約は消せなくても、売れる余地は残して書けませんか。",
+      },
+      case006: {
+        field: "建物は借地人さんのものです。こちらの土地なのに、見に行くほど不利な材料が増えるんですか。",
+        documents: "地代が低いのは昔からの経緯です。今の売却価格まで満額から遠くなるんでしょうか。",
+        appraisal: "借地人が買わないなら市場は狭い。でも、地主の権利としての価値は残りますよね。",
+        report: "交渉が難しいことは分かります。底地でも、満額に近づく説明の余地を残せませんか。",
+      },
+      case007: {
+        field: "部屋からの眺望は本当に強いんです。共用部の掲示ばかり見られると印象が悪くなります。",
+        documents: "修繕積立の話は管理組合全体の問題です。私の部屋の価格にどこまで響くんですか。",
+        appraisal: "眺望プレミアムで押せる部屋です。積立不足を入れても、上側のレンジに残せませんか。",
+        report: "買主には眺望を先に見てほしい。管理リスクを書くにしても、価値が消えたような表現は困ります。",
+      },
+      case008: {
+        field: "湖畔の眺望と繁忙期の稼働は強みです。古い設備ばかり見られると売却話が止まります。",
+        documents: "今年の繁忙期は本当に良かったんです。年間平均に戻すと、ホテルの勢いが伝わらない気がします。",
+        appraisal: "繁忙期ベースではだめでも、ADR上昇をどこまで収益価格に残せるか見たいんです。",
+        report: "買い手には成長余地を伝えたい。FF&Eや委託契約のリスクだけで終わる評価書にはしたくありません。",
+      },
+      case009: {
+        field: "大型テナントが使いやすい倉庫です。接車制限を強く書くと投資家が警戒します。",
+        documents: "解約通知権は契約上よくある条項です。満床前提の安定性まで崩して見ますか。",
+        appraisal: "WALEは短く見えるかもしれませんが、再賃貸需要はあります。そこを説明できる余地はありますよね。",
+        report: "投資家には安定運用を見せたい。退去リスクは認めますが、物流立地の強さも同じ重さで書いてください。",
+      },
+      case010: {
+        field: "現地の見え方と日本の説明資料では、受け取られ方が違います。日本側に弱く見えすぎませんか。",
+        documents: "現地鑑定書では通っている前提です。日本式のレビューで円建て価格だけ下がるのは説明しづらいです。",
+        appraisal: "為替と借地期間を分けるのは分かります。円建ての見栄えを残す説明可能なレンジはありますか。",
+        report: "ファンド委員会には日本語で説明します。現地基準との差を、否定ではなくリスク注記として見せたいんです。",
+      },
+    };
+    return lines[spec.caseId] ?? null;
+  }
+
+  function makeClientGameplayLines(spec) {
+    const pressure = spec.pressureWord ?? "こちらに有利に";
+    const method = spec.methodTerm ?? "評価手法";
+    const adjustment = spec.adjustmentTerm ?? "調整";
+    const topic = spec.shortTitle ?? spec.subtitle ?? "この案件";
+    return {
+      field: `${topic}は見た目より条件で変わるんですね。ただ、良い面も拾ってください。`,
+      documents: `資料の弱いところばかり出ると困ります。${pressure}見える根拠もありますよね。`,
+      appraisal: `${method}で見るなら、裁量の範囲で${pressure}説明できる余地はありませんか。`,
+      report: `${adjustment}の必要性は分かります。評価書では、こちらの事情も伝わる書き方にしてください。`,
     };
   }
 
@@ -163,7 +233,7 @@
         ["法的可能性", `${spec.type}として扱うため、契約・規制・権利制限を先に閉じる。`],
         ["物理的可能性", `${spec.spots?.[0]?.title ?? spec.spots?.[0] ?? "現地で拾った制約"}を、利用可能性と費用負担に反映する。`],
         ["市場性", `${spec.description} 市場参加者が見る買主層・処分期間・運営安定性を確認する。`],
-        ["収益性・経済合理性", `${spec.methodTerm}と${riskTerm}を関連づけ、依頼者説明ではなく実現可能な利用を前提にする。`],
+        ["収益性・経済合理性", `${spec.methodTerm}と${riskTerm}を関連づけ、依頼者説明を起点にしつつ実現可能な利用へ絞る。`],
       ],
       conclusion: `結論: ${topic}としての最有効使用を前提に、${spec.methodTitle}を主軸として${riskTerm}を価格判断へ接続する。`,
     };
@@ -746,7 +816,7 @@
       priceDetail: "価格時点で判明している市場条件と契約条件を固定する。",
       subjectTitle: `${item.shortTitle}の対象範囲を確定`,
       subjectDetail: "土地、建物、権利、契約上の制限を評価対象として切り分ける。",
-      priceMessage: "価格時点を固定した。依頼者の見せたい数字から切り離して進める。",
+      priceMessage: "価格時点を固定した。依頼者の見せたい数字を、説明できる前提条件へ戻して進める。",
       subjectMessage: "対象不動産を確定した。権利と契約条件を先に閉じる。",
       intake: {
         chip: "依頼目的",
@@ -806,11 +876,11 @@
       appraisalCopy: {
         methodTerm: item.methodTerm,
         methodTitle: item.methodTitle,
-        methodBody: `${item.topic}の判断は、依頼者説明ではなく市場資料と契約条件をつなぐ。`,
+        methodBody: `${item.topic}の判断は、依頼者説明を起点に市場資料と契約条件へつなぐ。`,
         methodChoices: [
           { id: "A", label: `${item.methodTerm}を主軸に査定`, detail: "現地、資料、契約条件を関連づけて価格を組み立てる。" },
           { id: "B", label: "見た目の近い事例を主採用", detail: "比較しやすいが、権利・収益・契約条件が薄い。" },
-          { id: "C", label: "依頼者提示資料を主採用", detail: "説明は速いが、独立性が弱い。" },
+          { id: "C", label: "依頼者提示資料を主採用", detail: "説明は速いが、資料裏付けと裁量範囲の説明が弱い。" },
         ],
         adjustmentTerm: item.adjustmentTerm,
         adjustmentTitle: item.adjustmentTitle,

@@ -2,6 +2,11 @@ import { createReadStream, existsSync, statSync } from "node:fs";
 import { createServer } from "node:http";
 import { extname, join, normalize, resolve, sep } from "node:path";
 import { fileURLToPath } from "node:url";
+import {
+  assetCacheControl,
+  htmlCacheControl,
+  securityHeaders as productionSecurityHeaders,
+} from "./security-headers.mjs";
 
 const root = resolve(fileURLToPath(new URL("..", import.meta.url)));
 const host = process.env.HOST ?? "127.0.0.1";
@@ -18,20 +23,6 @@ const contentTypes = new Map([
   [".json", "application/json; charset=utf-8"],
   [".txt", "text/plain; charset=utf-8"],
 ]);
-
-const csp = [
-  "default-src 'self'",
-  "script-src 'self'",
-  "style-src 'self'",
-  "img-src 'self'",
-  "font-src 'self'",
-  "media-src 'self'",
-  "connect-src 'self'",
-  "base-uri 'none'",
-  "object-src 'none'",
-  "frame-ancestors 'none'",
-  "form-action 'none'",
-].join("; ");
 
 const server = createServer((request, response) => {
   if (request.method !== "GET" && request.method !== "HEAD") {
@@ -101,18 +92,11 @@ function resolvePublicPath(rawUrl) {
 }
 
 function securityHeaders() {
-  return {
-    "Content-Security-Policy": csp,
-    "Cross-Origin-Opener-Policy": "same-origin",
-    "Permissions-Policy": "camera=(), microphone=(), geolocation=(), payment=()",
-    "Referrer-Policy": "no-referrer",
-    "X-Content-Type-Options": "nosniff",
-    "X-Frame-Options": "DENY",
-  };
+  return productionSecurityHeaders;
 }
 
 function cacheControl(filePath) {
   const relative = filePath.slice(root.length + 1).replaceAll("\\", "/");
-  if (relative.startsWith("assets/")) return "public, max-age=3600";
-  return "no-cache";
+  if (relative.startsWith("assets/")) return assetCacheControl;
+  return htmlCacheControl;
 }

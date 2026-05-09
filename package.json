@@ -15,7 +15,9 @@
     "test:switch-readiness": "node scripts/verify-switch-readiness.mjs",
     "test:persona": "node scripts/persona-score-check.mjs",
     "test:production": "node scripts/verify-production-server.mjs",
-    "test:e2e": "playwright test tests/*.spec.js --reporter=line"
+    "test:deploy-config": "node scripts/verify-deploy-config.mjs",
+    "test:public-headers": "node scripts/verify-public-headers.mjs",
+    "test:e2e": "playwright test tests --reporter=line"
   },
   "devDependencies": {
     "@playwright/test": "1.59.1"

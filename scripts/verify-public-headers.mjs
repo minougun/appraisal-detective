@@ -45,7 +45,7 @@ function normalizeUrl(raw) {
 function assertHeader(headers, name, expected, label, options = {}) {
   const actual = headers.get(name);
   if (options.allowExtraDirectives) {
-    assert(actual?.split(",").map((part) => part.trim()).includes(expected), `${label} should include ${name}: ${expected}; got ${actual}`);
+    assert(actual === expected || actual?.includes(expected), `${label} should include ${name}: ${expected}; got ${actual}`);
     return;
   }
   assert(actual === expected, `${label} should set ${name}: ${expected}; got ${actual}`);

@@ -155,3 +155,51 @@ curl -I 'https://minougun.github.io/appraisal-detective/styles.css?v=20260509-ui
 残リスク:
 
 - GitHub Pagesの制約により、HTTP response headerとしてのCSP等は引き続き未反映。公開βとして扱う。
+
+## 2026-05-09 Vercel正式本番デプロイ
+
+対象:
+
+- Formal production URL: `https://appraisal-detective.vercel.app/`
+- GitHub Pages public beta URL: `https://minougun.github.io/appraisal-detective/`
+
+実施内容:
+
+- Vercelへproduction deploy。
+- `vercel.json` の正式本番ヘッダ設定がVercel配信で反映されることを確認。
+- `scripts/verify-public-headers.mjs` の `Cache-Control` 判定を修正し、`public, max-age=3600` を正しく検証できるようにした。
+- Vercel CLIが日本語PC名で失敗する環境向けに `scripts/vercel-ascii-hostname.cjs` を追加。
+- Vercel CLIが作る `.vercel/` を `.gitignore` に追加。
+
+検証:
+
+```bash
+node scripts/verify-public-headers.mjs https://appraisal-detective.vercel.app/
+curl -I https://appraisal-detective.vercel.app/
+curl -I https://appraisal-detective.vercel.app/app.js
+curl -I https://appraisal-detective.vercel.app/assets/fonts/NotoSansJP-VF.ttf
+npm run test:deploy-config
+npm run test:production
+```
+
+結果:
+
+- `public_header_checks=passed url=https://appraisal-detective.vercel.app/`
+- `https://appraisal-detective.vercel.app/`: `200`
+- `Content-Security-Policy`: present
+- `Cross-Origin-Opener-Policy: same-origin`: present
+- `Permissions-Policy: camera=(), microphone=(), geolocation=(), payment=()`: present
+- `Referrer-Policy: no-referrer`: present
+- `X-Content-Type-Options: nosniff`: present
+- `X-Frame-Options: DENY`: present
+- HTML `Cache-Control: no-cache`: present
+- asset `Cache-Control: public, max-age=3600`: present
+- Windows Chrome headlessで mobile `390x844` と desktop `1440x1000` を確認。
+
+判定:
+
+```text
+Vercel正式本番: 完了
+正式本番ヘッダ検証: 完了
+GitHub Pages公開β: 継続。ただし正式本番扱いしない
+```

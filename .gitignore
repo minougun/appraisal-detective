@@ -12,3 +12,4 @@ openai-response*.json
 .env
 .env.*
 *.local
+.vercel/

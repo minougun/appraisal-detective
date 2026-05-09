@@ -256,10 +256,11 @@ test("generated image manifest tracks every local generated asset without secret
   const response = await request.get("http://127.0.0.1:44561/assets-manifest.json");
   expect(response.ok()).toBeTruthy();
   const manifest = await response.json();
-  expect(manifest.schemaVersion).toBe(1);
+  expect(manifest.schemaVersion).toBe(2);
   expect(manifest.assets).toHaveLength(22);
   expect(manifest.notes.join(" ")).toContain("No API keys or secrets");
   expect(JSON.stringify(manifest)).not.toMatch(/sk-|OPENAI_API_KEY|\\.openai-api-key/i);
+  expect(JSON.stringify(manifest)).not.toMatch(/sourceArtifactPath|\"prompt\"/);
   expect(manifest.assets).toEqual(
     expect.arrayContaining([
       expect.objectContaining({
@@ -301,7 +302,10 @@ test("generated image manifest tracks every local generated asset without secret
         promptSummary: expect.any(String),
         creditText: expect.any(String),
         regenerationPolicy: expect.any(String),
-        modelRationale: expect.any(String),
+        generationPath: expect.any(String),
+        promptHash: expect.stringMatching(/^[a-f0-9]{64}$/),
+        selectedBy: expect.any(String),
+        selectionReason: expect.any(String),
         sha256: expect.stringMatching(/^[a-f0-9]{64}$/),
         width: expect.any(Number),
         height: expect.any(Number),
@@ -325,15 +329,29 @@ test("generated image manifest tracks every local generated asset without secret
   }
 });
 
-test("image generation script protects partial gpt-image-2 refresh metadata", async () => {
-  const script = await fs.promises.readFile("scripts/generate-image-assets.mjs", "utf8");
+test("image refresh script protects partial gpt-image-2 refresh metadata", async () => {
+  const script = await fs.promises.readFile("scripts/refresh-image-assets.mjs", "utf8");
   expect(script).toContain('OPENAI_IMAGE_MODEL ?? "gpt-image-2"');
+  expect(script).toContain('OPENAI_IMAGE_QUALITY ?? "medium"');
   expect(script).toContain("OPENAI_IMAGE_ASSET_FILES");
+  expect(script).toContain("Refusing to refresh every image asset by default.");
   expect(script).toContain("previousModel");
   expect(script).toContain("previousSha256");
   expect(script).toContain("refreshReason");
+  expect(script).toContain("promptHash");
+  expect(script).toContain("generationPath");
   expect(script).toContain("ab_review_pending");
   expect(script).toContain("The script will not silently fall back to another model.");
+});
+
+test("imagegen adoption and manifest validation scripts exist", async () => {
+  const adoptScript = await fs.promises.readFile("scripts/adopt-image-asset.mjs", "utf8");
+  const validateScript = await fs.promises.readFile("scripts/validate-assets-manifest.mjs", "utf8");
+  expect(adoptScript).toContain("imagegen_builtin");
+  expect(adoptScript).toContain(".asset-provenance.private.json");
+  expect(adoptScript).toContain("sourceArtifactPath");
+  expect(validateScript).toContain("prompt must not be present in public manifest");
+  expect(validateScript).toContain("asset_manifest_ok=true");
 });
 
 test("serves self-hosted Japanese UI font", async ({ request }) => {
@@ -1005,6 +1023,28 @@ test("field hotspots meet 44px target and gameplay cast stays in the game screen
   await expect(page.locator(".gameplay-cast")).toContainText("田中修一");
 });
 
+test("mobile interactive controls keep at least 44px touch targets", async ({ page }) => {
+  await page.setViewportSize({ width: 390, height: 844 });
+  await page.goto("http://127.0.0.1:44561/", { waitUntil: "networkidle" });
+  await startCase(page, "case001", "normal");
+
+  const intakeTargets = await page.evaluate(() =>
+    Array.from(document.querySelectorAll(".action-button, .ghost-button, .option-button, .product-menu-button"))
+      .filter((node) => node instanceof HTMLElement && node.offsetParent !== null)
+      .map((node) => ({ className: node.className, height: node.getBoundingClientRect().height })),
+  );
+  expect(intakeTargets.length).toBeGreaterThan(0);
+  for (const target of intakeTargets) {
+    expect(target.height).toBeGreaterThanOrEqual(44);
+  }
+
+  await page.locator("[data-intake=professional]").click();
+  await advancePhase(page, "現地調査へ");
+  const hotspot = await page.locator("[data-hotspot=wallCrack]").boundingBox();
+  expect(hotspot.width).toBeGreaterThanOrEqual(44);
+  expect(hotspot.height).toBeGreaterThanOrEqual(44);
+});
+
 test("client gameplay reactions are case-specific and not shared filler", async ({ page }) => {
   await page.goto("http://127.0.0.1:44561/", { waitUntil: "networkidle" });
   const lines = await page.evaluate(() => {
@@ -1025,6 +1065,41 @@ test("client gameplay reactions are case-specific and not shared filler", async 
   expect(Object.values(lines)).not.toContain("もう少し言い方で調整できませんか。");
 });
 
+test("later commercial cases replace compact template copy with case-specific phase text", async ({ page }) => {
+  await page.goto("http://127.0.0.1:44561/", { waitUntil: "networkidle" });
+  const copy = await page.evaluate(() => {
+    const definitions = window.APPRAISAL_CASE_DATA.caseDefinitions;
+    return Object.fromEntries(
+      ["case006", "case007", "case008", "case009", "case010"].map((caseId) => {
+        const info = definitions[caseId];
+        return [
+          caseId,
+          {
+            intake: info.intake.body,
+            firstSpot: window.APPRAISAL_CASE_DATA.evidenceCatalog[window.APPRAISAL_CASE_DATA.caseHotspots[caseId][0].id].detail,
+            firstDoc: window.APPRAISAL_CASE_DATA.caseDocumentIssues[caseId][0].detail,
+            report: info.reportPressure.client,
+            scenario: info.marketScenarios[0].title,
+          },
+        ];
+      }),
+    );
+  });
+
+  expect(copy.case006.intake).toContain("借地人との買取交渉");
+  expect(copy.case007.firstSpot).toContain("修繕費");
+  expect(copy.case008.firstDoc).toContain("ADR上昇と稼働率低下");
+  expect(copy.case009.report).toContain("退去リスク");
+  expect(copy.case010.scenario).toContain("為替感応度");
+
+  for (const item of Object.values(copy)) {
+    expect(item.intake).not.toContain("依頼者の利害が強く出る評価依頼");
+    expect(item.firstSpot).not.toContain("価格判断に影響する。");
+    expect(item.firstDoc).not.toContain("依頼者説明だけではなく");
+    expect(item.report).not.toContain("表現だけでも調整できませんか");
+  }
+});
+
 test("scenario demand fallback varies and frames professional discretion", async ({ page }) => {
   await page.goto("http://127.0.0.1:44561/", { waitUntil: "networkidle" });
   const lines = await page.evaluate(() => {
@@ -1042,6 +1117,53 @@ test("scenario demand fallback varies and frames professional discretion", async
   expect(lines.join(" ")).toContain("根拠");
   expect(lines.join(" ")).toContain("裁量");
   expect(lines.join(" ")).not.toContain("表現だけでも少し調整できませんか");
+});
+
+test("evidence route scoring supports replay research and strict audit penalties", async ({ page }) => {
+  await page.goto("http://127.0.0.1:44561/", { waitUntil: "networkidle" });
+  const routes = await page.evaluate(() => {
+    const scoring = window.APPRAISAL_SCORING;
+    const reportStructure = {
+      fact: ["rentRoll"],
+      analysis: ["capRateGap"],
+      conclusion: ["incomeAdjustment"],
+    };
+    const marketScenario = { supportEvidence: ["rentRoll", "capRateGap"] };
+    return {
+      optimal: scoring.evaluateEvidenceRoute({
+        reportIds: ["rentRoll", "capRateGap", "incomeAdjustment"],
+        requiredReport: ["rentRoll", "capRateGap", "incomeAdjustment"],
+        highValueCards: ["rentRoll", "capRateGap", "incomeAdjustment"],
+        marketScenario,
+        reportStructure,
+        challengeMode: true,
+      }),
+      thin: scoring.evaluateEvidenceRoute({
+        reportIds: ["rentRoll", "tenantMix", "vacancySign"],
+        requiredReport: ["rentRoll", "capRateGap", "incomeAdjustment"],
+        highValueCards: ["rentRoll", "capRateGap", "incomeAdjustment"],
+        marketScenario,
+        reportStructure,
+        challengeMode: true,
+      }),
+      variance: scoring.evaluateScoreVariance({
+        awards: [],
+        mechanic: { term: "DCR確認", choices: [], input: null },
+        adjustmentBand: null,
+        marketScenario,
+        reportIds: ["rentRoll", "tenantMix", "vacancySign"],
+        reportStructure,
+        requiredReport: ["rentRoll", "capRateGap", "incomeAdjustment"],
+        highValueCards: ["rentRoll", "capRateGap", "incomeAdjustment"],
+        challengeMode: true,
+      }),
+    };
+  });
+
+  expect(routes.optimal.level).toBe("optimal");
+  expect(routes.optimal.delta).toBeGreaterThan(routes.thin.delta);
+  expect(routes.thin.label).toContain("監査リスク");
+  expect(routes.variance.label).toContain("別解評価");
 });
 
 test("phase transition displays a chapter cut-in before the next scene settles", async ({ page }) => {

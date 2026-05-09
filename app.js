@@ -108,6 +108,7 @@ let lowStimulus = audio.initialLowStimulus;
 let pressureFeedbackTimer;
 let evidenceFeedbackTimer;
 let mentorFeedbackTimer;
+let phaseCutInTimer;
 
 window.APPRAISAL_RUNTIME = {
   getPhase: () => state.phase,
@@ -591,6 +592,8 @@ function wrapPhaseGameDesk(variant) {
 function showPhaseCutIn(nextPhase) {
   if (lowStimulus || motionReduced.matches || nextPhase < 0) return;
   document.querySelectorAll(".phase-cut-in").forEach((node) => node.remove());
+  window.clearTimeout(phaseCutInTimer);
+  document.body.classList.add("phase-cut-active");
   const [chapter, title] = phaseMeta[nextPhase] ?? ["章", "次の工程"];
   const node = document.createElement("div");
   node.className = "phase-cut-in";
@@ -606,7 +609,12 @@ function showPhaseCutIn(nextPhase) {
   plate.append(small, strong, line);
   node.append(plate);
   document.body.append(node);
-  window.setTimeout(() => node.remove(), 1380);
+  const cleanup = () => {
+    node.remove();
+    document.body.classList.remove("phase-cut-active");
+  };
+  node.addEventListener("animationend", cleanup, { once: true });
+  phaseCutInTimer = window.setTimeout(cleanup, 1500);
 }
 
 function gameplayCastMarkup(key) {
@@ -1114,6 +1122,7 @@ function caseFileMarkup({ id, number, badge, title, subtitle, description, recor
           <span>監査 ${htmlText(record.bestAudit ?? "未完了")}</span>
           <span>${htmlText(record.completions)}回</span>
         </span>
+        <span class="file-start-label">通常レビューを開始</span>
       </button>
       <button class="case-audit-stamp" data-start-case="${htmlAttr(id)}" data-mode="audit" aria-label="${htmlAttr(`${title}を監査レビューで開始`)}">監査</button>
     </article>
@@ -1376,18 +1385,6 @@ function renderFieldSurvey() {
       mentor("そこは気になるが、鑑定評価額を説明する根拠としては弱い。学びカードで理由を確認しよう。");
     });
   });
-  view.querySelector(".scene-shell img")?.addEventListener(
-    "error",
-    (event) => {
-      const image = event.currentTarget;
-      const fallbackSrc = localAssetPath(image.dataset.fallbackSrc, "");
-      if (fallbackSrc && image.src !== fallbackSrc) {
-        image.src = fallbackSrc;
-      }
-      image.removeAttribute("data-fallback-src");
-    },
-    { once: true },
-  );
   view.querySelector("#hint-field").addEventListener("click", () => {
     mentor(
       state.caseId === "case003"
@@ -2291,6 +2288,9 @@ function renderResult() {
     marketScenario: activeMarketScenario(),
     reportIds,
     reportStructure: currentCase().reportStructure,
+    requiredReport: currentCase().requiredReport,
+    highValueCards,
+    challengeMode: state.challengeMode,
   });
   const total = clamp(baseTotal + challenge.delta + timeAdjustment.delta + variance.delta);
   const finalGrade = grade(total);
@@ -2334,7 +2334,7 @@ function renderResult() {
       </p>
       <p class="score-breakdown">経過時間 ${htmlText(formatDuration(elapsed))} / ${htmlText(timeAdjustment.label)}。${htmlText(variance.label)}</p>
       ${marketScenarioResultMarkup(scenarioStatus)}
-      ${alternativeEvidenceReviewMarkup(scenarioStatus)}
+      ${alternativeEvidenceReviewMarkup(scenarioStatus, variance.evidenceRoute)}
       ${replayTitleMarkup(replayTitles)}
       <p>${htmlText(reviewText(total, expertise))}</p>
       <section class="result-mentor-line">
@@ -2343,7 +2343,7 @@ function renderResult() {
       </section>
       ${hbuRenderer.auditCriteriaMarkup?.(caseInfo.auditCriteria, reportIds, auditEvidenceLabels) ?? ""}
       ${reviewChecklist(reportIds, challenge)}
-      ${replayBrief(total, scenarioStatus)}
+      ${replayBrief(total, scenarioStatus, variance.evidenceRoute)}
       <div class="selected-evidence">
         <h3>報告に使った根拠</h3>
         ${reportIds
@@ -2474,7 +2474,7 @@ function reviewChecklist(reportIds, challenge) {
   return challengePanel({ checks });
 }
 
-function replayBrief(total, scenarioStatus = marketScenarioStatus()) {
+function replayBrief(total, scenarioStatus = marketScenarioStatus(), evidenceRoute = null) {
   const reportIds = Array.from(state.selectedReport);
   const scenario = activeMarketScenario();
   const alternate = caseHighValueCards()
@@ -2514,6 +2514,11 @@ function replayBrief(total, scenarioStatus = marketScenarioStatus()) {
       ${
         alternate.length
           ? `<p>${htmlText(`別解ルート候補: ${alternate.join("、")}。同じ結論を別の三枚で支えると、監査・リプレイ評価が伸びる。`)}</p>`
+          : ""
+      }
+      ${
+        evidenceRoute?.nextCategory
+          ? `<p>${htmlText(`次に詰める証拠カテゴリ: ${evidenceRoute.nextCategory}。同じ案件でも別解評価が変わる。`)}</p>`
           : ""
       }
       <p>${htmlText(currentCase().replayGoal ?? "スコア研究軸: 調査、論証構成、裁量説明、説明責任を別々に伸ばす。")}</p>
@@ -2570,7 +2575,7 @@ function marketScenarioResultMarkup(status = marketScenarioStatus()) {
   `;
 }
 
-function alternativeEvidenceReviewMarkup(status = marketScenarioStatus()) {
+function alternativeEvidenceReviewMarkup(status = marketScenarioStatus(), scoredRoute = null) {
   const reportIds = Array.from(state.selectedReport);
   const requiredReport = currentCase().requiredReport ?? [];
   const requiredHits = requiredReport.filter((id) => reportIds.includes(id)).length;
@@ -2583,7 +2588,8 @@ function alternativeEvidenceReviewMarkup(status = marketScenarioStatus()) {
     ...requiredReport,
   ].filter((id, index, list) => !reportIds.includes(id) && list.indexOf(id) === index).slice(0, 3);
   const route =
-    scenarioTotal > 0 && scenarioHits >= Math.min(2, scenarioTotal) && requiredHits >= 2
+    scoredRoute ??
+    (scenarioTotal > 0 && scenarioHits >= Math.min(2, scenarioTotal) && requiredHits >= 2
       ? {
           level: "optimal",
           label: "最適構成",
@@ -2599,15 +2605,24 @@ function alternativeEvidenceReviewMarkup(status = marketScenarioStatus()) {
           level: "risk",
           label: "監査リスクあり",
           detail: "三枚の根拠が今回条件と結論を支えきれていない。重点証拠か重要カードを入れ直したい。",
-        };
+        });
+  const routeLabel = scoredRoute
+    ? scoredRoute.level === "optimal"
+      ? "最適構成"
+      : scoredRoute.level === "acceptable"
+      ? "許容構成"
+      : "監査リスクあり"
+    : route.label;
+  const routeDetail = scoredRoute?.label ?? route.detail ?? "";
 
   return `
     <section class="alternative-route-panel route-${classToken(route.level)}" aria-label="代替証拠評価">
       <div class="alternative-route-head">
         <span class="term-chip">代替証拠評価</span>
-        <strong>${htmlText(route.label)}</strong>
+        <strong>${htmlText(routeLabel)}</strong>
       </div>
-      <p>${htmlText(route.detail)}</p>
+      <p>${htmlText(routeDetail)}</p>
+      ${route.nextCategory ? `<p class="route-next-target">${htmlText(`次に詰める証拠カテゴリ: ${route.nextCategory}`)}</p>` : ""}
       <div class="route-comparison-grid">
         ${routeListMarkup("現在の三枚", reportIds, "今回の報告で依頼者へ提示した根拠。")}
         ${routeListMarkup(

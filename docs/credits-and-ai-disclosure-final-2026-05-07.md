@@ -58,15 +58,18 @@ AI生成画像は `/mnt/c/Users/minou/appraisal-detective/assets-manifest.json` 
 - `usage`
 - `altText`
 - `promptSummary`
+- `promptHash`
 - `creditText`
 - `regenerationPolicy`
-- `modelRationale`
 - `sha256`
 - `width`
 - `height`
 - `bytes`
+- `generationPath`
 - `reviewStatus`
 - `storeUseAllowed`
 - `aiDisclosureCategory`
+
+フルプロンプト、ローカル生成候補の絶対パス、rejected候補の詳細は公開用 `assets-manifest.json` には含めません。これらは非公開の `.asset-provenance.private.json` で管理し、公開配布物・GitHub Pages・ストア素材には含めません。
 
 `storeUseAllowed: true` はローカルβ・レビュー用素材としての内部承認です。外部公開前には、ストア提出用のキーアート、スクリーンショット、法務/ライセンス確認、プラットフォーム入力フォームとの照合を別途完了します。

@@ -80,13 +80,32 @@ http://127.0.0.1:44561/
 
 ## 画像生成
 
-`OPENAI_API_KEY` または `/mnt/c/Users/minou/.openai-api-key` がある環境では、以下で現地調査画像を再生成できます。既存画像がある場合は再生成せず、商用台帳 `assets-manifest.json` だけを更新できます。APIキー値はログへ出しません。
+画像制作の標準入口は app server 側の imagegen / ImageGen 実行面です。新規背景、キャラクター、カード、サムネイル、ストア素材は、まず imagegen で候補を作り、採用する画像だけ `scripts/adopt-image-asset.mjs` で `assets/` と台帳へ取り込みます。
 
-新規・更新対象の生成は現行デフォルトモデルを使い、既存画像は個別レビューで置換するまで記録済みのモデル情報を保持します。特定画像だけを更新する場合は `OPENAI_IMAGE_ASSET_FILES` にカンマ区切りのファイル名を指定します。
+OpenAI Images API を直接使う `scripts/refresh-image-assets.mjs` は、通常の新規制作入口ではありません。採用済み素材の対象指定刷新、A/B比較、manifest保守のための道具です。従量課金を伴うため、対象ファイルと刷新理由を明示し、全件刷新は明示フラグなしでは拒否します。APIキー値はログへ出しません。
 
 ```bash
 cd /mnt/c/Users/minou/appraisal-detective
-npm run generate:assets
+
+# imagegen候補を正式assetへ採用
+npm run adopt:asset -- \
+  --src /path/to/imagegen-candidate.png \
+  --dest assets/new-asset.generated.png \
+  --case-id case001 \
+  --asset-type field-image \
+  --usage "in-game field survey" \
+  --alt-text "画面読み上げ用の代替テキスト" \
+  --prompt-summary "公開台帳用の短いプロンプト概要" \
+  --selection-reason "UI内で証拠ヒントが最も読み取りやすい"
+
+# 採用済み素材の対象指定API刷新
+OPENAI_IMAGE_ASSET_FILES=kawabe-estate.generated.png \
+IMAGE_REFRESH_REASON=case001_ab_refresh \
+FORCE_IMAGE_ASSETS=true \
+npm run refresh:assets
+
+# 画像を再生成せず公開manifestだけv2形式で再計算
+UPDATE_ASSETS_MANIFEST_ONLY=true npm run refresh:assets
 ```
 
 生成先:
@@ -103,8 +122,9 @@ npm run generate:assets
 生成画像台帳:
 
 - `/mnt/c/Users/minou/appraisal-detective/assets-manifest.json`
+- `/mnt/c/Users/minou/appraisal-detective/.asset-provenance.private.json`（非公開・gitignore）
 
-台帳には `caseId`, `assetType`, `usage`, `altText`, `promptSummary`, `creditText`, `regenerationPolicy`, `modelRationale`, `sha256`, `width`, `height`, `bytes`, `reviewStatus`, `reviewedAt`, `reviewer`, `storeUseAllowed`, `aiDisclosureCategory` を含めます。
+公開台帳には `caseId`, `assetType`, `usage`, `altText`, `promptSummary`, `promptHash`, `creditText`, `regenerationPolicy`, `sha256`, `width`, `height`, `bytes`, `generationPath`, `reviewStatus`, `reviewedAt`, `reviewer`, `storeUseAllowed`, `aiDisclosureCategory` を含めます。フルプロンプト、ローカル絶対パス、rejected候補の詳細は公開台帳へ入れず、非公開provenanceへ分離します。
 
 画像刷新時は `previousModel`, `previousSha256`, `refreshReason`, `inGameUseAllowed`, `storeUseAllowed` も記録し、A/B確認前の素材をストア採用済みとして扱わないようにします。
 

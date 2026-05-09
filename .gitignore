@@ -5,6 +5,10 @@ playwright-report/
 .omx/
 dist/
 assets/visual-refresh-baseline-2026-05-08/
+.asset-provenance.private.json
+.asset-provenance.*.private.json
+imagegen-candidates/
+openai-response*.json
 .env
 .env.*
 *.local

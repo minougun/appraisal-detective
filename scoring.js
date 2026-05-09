@@ -83,6 +83,9 @@
     marketScenario,
     reportIds,
     reportStructure,
+    requiredReport = [],
+    highValueCards = [],
+    challengeMode = false,
   }) {
     const mistakeCount = Array.from(awards).filter(
       (key) =>
@@ -100,6 +103,14 @@
     const adjustmentDelta = adjustmentBand ? (adjustmentBand.correct ? 3 : -3) : 0;
     const support = evaluateAdjustmentSupport(adjustmentBand, adjustmentSupport, marketScenario);
     const scenarioReport = evaluateMarketScenarioReport(reportIds, marketScenario);
+    const evidenceRoute = evaluateEvidenceRoute({
+      reportIds,
+      requiredReport,
+      highValueCards,
+      marketScenario,
+      reportStructure,
+      challengeMode,
+    });
     const rebuttalDelta = rebuttalOption ? (rebuttalOption.correct && rebuttalSupported ? 4 : -4) : 0;
     const mistakeDelta = -Math.min(10, mistakeCount * 2);
     const delta =
@@ -109,6 +120,7 @@
       adjustmentDelta +
       support.delta +
       scenarioReport.delta +
+      evidenceRoute.delta +
       rebuttalDelta +
       mistakeDelta;
     const mechanicLabel = mechanicChoice
@@ -131,6 +143,7 @@
       : "調整幅は未選択";
     const supportLabel = support.label;
     const scenarioReportLabel = scenarioReport.label;
+    const evidenceRouteLabel = evidenceRoute.label;
     const rebuttalLabel = rebuttalOption
       ? rebuttalOption.correct && rebuttalSupported
         ? `再反論の根拠適合（${rebuttalEvidence}）`
@@ -139,6 +152,7 @@
     const mistakeLabel = mistakeCount > 0 ? `弱い根拠選択 ${mistakeCount}件` : "弱い根拠選択なし";
     return {
       delta,
+      evidenceRoute,
       label: [
         mechanicLabel,
         inputLabel,
@@ -146,6 +160,7 @@
         adjustmentLabel,
         supportLabel,
         scenarioReportLabel,
+        evidenceRouteLabel,
         rebuttalLabel,
         mistakeLabel,
       ]
@@ -179,6 +194,68 @@
     return { delta: -4, label: "市場シナリオ報告: 今回条件への説明不足" };
   }
 
+  function evaluateEvidenceRoute({
+    reportIds = [],
+    requiredReport = [],
+    highValueCards = [],
+    marketScenario,
+    reportStructure,
+    challengeMode = false,
+  }) {
+    const scenarioEvidence = marketScenario?.supportEvidence ?? [];
+    const requiredHits = requiredReport.filter((id) => reportIds.includes(id));
+    const scenarioHits = scenarioEvidence.filter((id) => reportIds.includes(id));
+    const highValueHits = highValueCards.filter((id) => reportIds.includes(id));
+    const structure = evaluateReportStructure(reportIds, reportStructure);
+    const requiredTarget = Math.min(2, requiredReport.length);
+    const scenarioTarget = Math.min(2, scenarioEvidence.length);
+    const hasAlternateStudy =
+      highValueHits.length >= 2 &&
+      (scenarioHits.length >= 1 || requiredHits.length >= requiredTarget) &&
+      structure.delta >= 1;
+
+    if (requiredHits.length >= requiredTarget && scenarioHits.length >= scenarioTarget && structure.delta >= 4) {
+      return {
+        delta: challengeMode ? 8 : 6,
+        level: "optimal",
+        nextCategory: "監査厳格化でも通る別順序を研究",
+        label: "別解評価: 最適3枚。重点根拠と事実→分析→結論が揃う",
+      };
+    }
+
+    if (hasAlternateStudy) {
+      const strictPenalty = challengeMode && scenarioHits.length < scenarioTarget ? -2 : 0;
+      return {
+        delta: 3 + strictPenalty,
+        level: "acceptable",
+        nextCategory: scenarioHits.length < scenarioTarget ? "市場シナリオ根拠" : "報告順序",
+        label:
+          strictPenalty < 0
+            ? "別解評価: 許容3枚。ただし監査厳格化では市場シナリオ根拠が不足"
+            : "別解評価: 許容3枚。結論は説明可能だが最適化余地あり",
+      };
+    }
+
+    if (requiredHits.length >= 1 || scenarioHits.length >= 1) {
+      return {
+        delta: challengeMode ? -3 : -1,
+        level: "thin",
+        nextCategory: requiredHits.length < requiredTarget ? "重要カード" : "市場シナリオ根拠",
+        label:
+          challengeMode
+            ? "別解評価: 監査リスクあり。根拠3枚の組み合わせが厳格レビューに弱い"
+            : "別解評価: 薄い構成。重点根拠か重要カードを差し替えたい",
+      };
+    }
+
+    return {
+      delta: challengeMode ? -6 : -4,
+      level: "risk",
+      nextCategory: "重要カードと市場シナリオ根拠",
+      label: "別解評価: 固定解暗記に寄った弱い構成。証拠カテゴリを組み直したい",
+    };
+  }
+
   function evaluateReportStructure(reportIds, reportStructure = {}) {
     const stages = reportIds.map((id) => reportStage(id, reportStructure));
     const exact = stages[0] === "fact" && stages[1] === "analysis" && stages[2] === "conclusion";
@@ -204,5 +281,6 @@
     evaluateChallenge,
     evaluateScoreVariance,
     evaluateReportStructure,
+    evaluateEvidenceRoute,
   };
 })();

@@ -794,9 +794,348 @@
     },
   ];
 
+  function compactCaseNarrative(caseId, spotIds, docIds) {
+    const map = {
+      case006: {
+        mentorStart: "「底地は更地価格の影ではない。地代、借地人の交渉姿勢、買主の限られ方を別々に見ろ。」",
+        priceDetail: "借地人との協議状況と地代水準が見えている価格時点に固定する。",
+        subjectDetail: "底地として、土地所有権から借地人の占有・契約制限を切り分ける。",
+        priceMessage: "価格時点を固定した。地主の売却希望ではなく、地代と交渉履歴から底地市場を読む。",
+        subjectMessage: "底地の対象範囲を確定した。更地ではなく、借地人付きの収益権として扱う。",
+        intake: {
+          body: "地主から底地売却の相談。借地人との買取交渉が進まず、第三者売却で満額に近い説明を求められている。",
+          clientLine: "借地人が買わないだけで土地の価値はあります。できれば<span class=\"pressure-word\">満額に近く</span>見てほしいんです。",
+          mentorLine: "地主の事情は売却理由だ。評価では、誰が買える底地なのか、地代でどこまで説明できるかを見る。",
+          issues: ["価格の種類: 底地としての正常価格", "対象不動産: 借地人付き土地所有権", "依頼者圧力: 更地価格へ近づけたい", "確認軸: 地代水準、借地人交渉、流動性減価"],
+          professionalTitle: "底地市場を前提に受任する",
+          professionalDetail: "更地価格ではなく、地代収受権と買主制約から説明する。",
+          pressureTitle: "地主希望の更地感を残す",
+          pressureDetail: "見た目の土地価値は高くなるが、買主が限定される理由が消える。",
+        },
+        spotTerms: ["地代改定", "建物老朽化", "境界リスク", "通行負担", "流動性"],
+        spotDetails: [
+          "改定協議が長引くほど、地代収受権の安定性と借地人関係が価格に効く。",
+          "借地人建物の老朽化は、将来の建替え・更新協議の難度を示す。",
+          "境界塀の越境疑いは、底地売却時の買主説明と交渉コストになる。",
+          "私道通行の負担は、借地人以外の買主が見る利用制約になる。",
+          "長期掲示の売地看板は、第三者市場での売れにくさを示す。",
+        ],
+        decoySpots: [
+          { id: "leasedlandDecoyA", label: "D1", x: 18, y: 26, title: "地主宅の表札", lesson: "所有者の信用や地元性は、底地の買主制約を直接解決しない。" },
+          { id: "leasedlandDecoyB", label: "D2", x: 84, y: 48, title: "近隣の更地駐車場", lesson: "更地利用の見た目に引っ張られると、借地人付き土地の市場性を誤る。" },
+        ],
+        panels: [
+          { title: "地主提出メモ", items: ["売却希望: 更地価格に近い説明", "交渉状況: 借地人買取は不調", "価格時点: 2026-05-05", "未確認事項: 地代改定履歴と更新料収受"] },
+          { title: "照合資料", items: ["地代水準: 近隣より低位", "交渉記録: 借地人の買取意思は限定的", "更新料: 収受根拠が曖昧"] },
+        ],
+        docDetails: [
+          "現行地代は近隣水準を下回り、底地の収益価格と改定余地の説明が必要になる。",
+          "借地人買取交渉の不調は、第三者買主の出口リスクと売却期間に直結する。",
+          "更新料履歴が曖昧だと、将来収入の期待を評価に織り込む根拠が弱くなる。",
+        ],
+        decoyDocument: { title: "近隣更地の募集チラシ", detail: "更地駐車場の募集賃料を強調した資料。", lesson: "更地募集は参考になるが、底地の買主制約と借地契約を飛ばしてはいけない。" },
+        appraisalCopy: {
+          methodBody: "底地価格は、所有権価格から単純控除するのではなく、地代収入と借地人交渉の出口から組み立てる。",
+          methodChoices: [
+            { id: "A", label: "地代収受権と流動性で査定", detail: "地代、借地人交渉、第三者買主の制約を関連づける。" },
+            { id: "B", label: "更地価格から軽く控除", detail: "土地価値は見えるが、借地人付きの市場性が薄い。" },
+            { id: "C", label: "地主希望額を出口価格に置く", detail: "説明は速いが、買主と交渉履歴の裏付けがない。" },
+          ],
+          adjustmentBody: "市場性減価は、地代水準・借地人交渉・更新料履歴で支える。",
+          adjustmentChoices: [
+            { id: "risk", label: "底地市場性減価を反映", detail: "買主限定と地代水準を価格形成要因として説明する。" },
+            { id: "soft", label: "更地に近い流動性で見る", detail: "地主希望には近いが、底地の出口制約を軽視する。" },
+          ],
+        },
+        bands: {
+          thin: { label: "薄い市場性減価 -6%", detail: "借地人買取が期待できる前提で、第三者市場の制約を軽く見る。", prompt: "薄い減価なら、借地人の買受意思か地代改定の根拠が必要。", lesson: "交渉不調のまま薄く見ると、底地の売れにくさを過小評価する。" },
+          balanced: { label: "底地標準減価 -16%", detail: "地代水準と借地人交渉不調を第三者市場の制約として反映する。", prompt: "底地標準減価を支える地代・交渉・現地カードを2枚選ぶ。", mentor: "底地の買主制約を価格へ落とせた。更地価格から離す判断に説明がある。" },
+          severe: { label: "交渉難航減価 -32%", detail: "借地人との関係悪化を重く見て、出口を大きく限定する。", prompt: "重い減価なら、承諾拒否や訴訟級の資料が必要。", lesson: "不調だけで過度に下げると、取得資料を超えた悲観になる。" },
+        },
+        rebuttal: { id: "leasedlandEvidenceReply", label: "地代水準で再反論", detail: "現行地代と交渉不調を根拠に、更地価格へ寄せられないと返す。", wrongLabel: "借地人に後で買わせる前提にする", wrongDetail: "出口を借地人買取に寄せる。", lesson: "交渉不調を確認した後に借地人買取を前提にすると、出口設定が根拠を超える。" },
+        clientRebuttals: { defaultLine: "底地でも土地は土地です。そこまで市場性を落とす必要がありますか。", rules: [{ evidence: docIds[0], line: "地代は昔からの付き合いです。安いだけで価格を下げるんですか。" }, { evidence: docIds[1], line: "借地人が買わないなら、投資家に売ればよいのでは。" }] },
+        reportPressure: { client: "更地に近い価値があると説明したいんです。底地と言いすぎない表現にできませんか。", mentor: "底地と書くかどうかではない。買主制約と地代収入を消すな。" },
+        marketScenarios: [
+          { id: "leasedlandRentGap", title: "地代改定リスクが焦点化", detail: "買主が地代改定の実現可能性を厳しく見る局面。", appraisalHint: "地代水準と更新料履歴を支える根拠にする。", supportEvidence: [docIds[0], docIds[2]] },
+          { id: "leasedlandBuyerThin", title: "底地買主層がさらに薄い", detail: "第三者投資家が借地人交渉と出口期間を重く見る。", appraisalHint: "交渉不調と長期掲示を支える根拠にする。", supportEvidence: [docIds[1], spotIds[4]] },
+          { id: "leasedlandBoundary", title: "越境・通行負担が交渉材料化", detail: "売却前の境界整理と私道負担が買主の減額要求になる。", appraisalHint: "境界と通行負担を報告根拠に入れる。", supportEvidence: [spotIds[2], spotIds[3]] },
+        ],
+        replayGoal: "次周目標: 地代収受権、借地人交渉、第三者市場の薄さを別々に採点し、底地として説明する。",
+      },
+      case007: {
+        mentorStart: "「区分所有は専有部だけを見るな。管理、積立、同一棟の成約が価格を動かす。」",
+        priceDetail: "修繕積立不足と近隣新築計画が見えている時点で価格を固定する。",
+        subjectDetail: "専有部分だけでなく、共用部、管理規約、積立不足を評価対象に含める。",
+        priceMessage: "価格時点を固定した。眺望の魅力と管理リスクを同じ画面で見る。",
+        subjectMessage: "区分所有の対象範囲を確定した。専有部の美観だけでは評価できない。",
+        intake: {
+          body: "高層階住戸の売却相談。依頼者は眺望を強調する一方、修繕積立不足と新築計画の影響を弱く見せたい。",
+          clientLine: "この眺望は希少です。修繕の話より<span class=\"pressure-word\">眺望プレミアム</span>を前に出せませんか。",
+          mentorLine: "眺望は価格形成要因だ。ただし共用部と将来負担を見ない眺望プレミアムは危うい。",
+          issues: ["価格の種類: 区分所有の正常価格", "対象不動産: 専有部・共用部・管理規約", "依頼者圧力: 眺望を過大に見せたい", "確認軸: 同一棟成約、積立不足、管理状態"],
+          professionalTitle: "専有部と共用部を同時に見る",
+          professionalDetail: "眺望加点と修繕負担を同じ説明責任で扱う。",
+          pressureTitle: "眺望だけを価格の主役にする",
+          pressureDetail: "第一印象は良いが、管理状態と積立不足の説明が弱くなる。",
+        },
+        spotTerms: ["共用部劣化", "眺望阻害", "設備負担", "管理状態", "生活阻害"],
+        spotDetails: [
+          "外壁タイルの浮きは、将来修繕費と管理組合の実行力を読む根拠になる。",
+          "新築計画は眺望プレミアムの持続性を直接揺らす。",
+          "機械式駐車場の故障は、共用部コストと修繕積立不足に接続する。",
+          "管理掲示は、管理の透明性と滞納・修繕予定の確認入口になる。",
+          "上階騒音の注意文は、個別的要因として買主説明が必要になる。",
+        ],
+        decoySpots: [
+          { id: "condoDecoyA", label: "D1", x: 18, y: 26, title: "新しい宅配ボックス", lesson: "利便性はあるが、積立不足や眺望阻害より価格影響は限定的。" },
+          { id: "condoDecoyB", label: "D2", x: 84, y: 48, title: "モデルルーム風の家具", lesson: "室内演出は販売上の魅力であり、管理状態の根拠ではない。" },
+        ],
+        panels: [
+          { title: "売主ヒアリング", items: ["強調点: 眺望プレミアム", "伏せたい点: 修繕積立不足", "価格時点: 2026-05-05", "未確認事項: 同一棟成約と管理規約"] },
+          { title: "照合資料", items: ["積立不足: 長期修繕計画を下回る", "成約事例: 低層階中心で眺望差調整が必要", "規約: 民泊禁止で収益転用は不可"] },
+        ],
+        docDetails: [
+          "修繕積立金が計画を下回り、将来の一時金や管理リスクを価格へ反映する必要がある。",
+          "同一棟成約が低層階中心なら、眺望差を足しつつ新築計画で持続性を削る。",
+          "民泊禁止は、収益転用期待を抑え、自己利用・通常賃貸の市場に戻す根拠になる。",
+        ],
+        decoyDocument: { title: "眺望写真入り販売チラシ", detail: "夕景写真と強いキャッチコピーで眺望を訴求する資料。", lesson: "眺望は評価するが、写真の印象だけでは持続性や管理リスクを説明できない。" },
+        appraisalCopy: {
+          methodBody: "同一棟・同一需給圏の事例を使い、階数、方位、眺望、管理状態を個別に調整する。",
+          methodChoices: [
+            { id: "A", label: "同一棟成約と管理状態で査定", detail: "眺望加点と修繕負担を同じ比較表で扱う。" },
+            { id: "B", label: "眺望写真の訴求力を主採用", detail: "買いたくなる見た目はあるが、比較根拠が薄い。" },
+            { id: "C", label: "売主希望の上限価格を採る", detail: "売却戦略には近いが、管理リスクが消える。" },
+          ],
+          adjustmentBody: "個別的要因比較は、眺望加点、積立不足、共用部劣化を証拠カードで支える。",
+          adjustmentChoices: [
+            { id: "risk", label: "眺望加点と積立不足を両建て", detail: "魅力と将来負担を同時に説明する。" },
+            { id: "soft", label: "眺望プレミアムを主役にする", detail: "売主には近いが、修繕負担を軽く扱う。" },
+          ],
+        },
+        bands: {
+          thin: { label: "薄い管理減価 -4%", detail: "眺望の希少性を重く見て、修繕負担を小さく扱う。", prompt: "薄い減価なら、積立不足を補う管理改善資料が必要。", lesson: "積立不足を薄く見ると、買主の将来負担説明が弱くなる。" },
+          balanced: { label: "管理・眺望調整 -10%", detail: "眺望加点を認めつつ、積立不足と新築計画を反映する。", prompt: "管理・眺望調整を支える積立・成約・現地カードを2枚選ぶ。", mentor: "眺望を否定せず、将来負担も消さない。区分所有らしい調整だ。" },
+          severe: { label: "管理不全減価 -24%", detail: "修繕積立不足を重く見て、買主層を大きく狭める。", prompt: "重い減価なら、管理不全が確定的な資料が必要。", lesson: "不足見込みだけで過度に下げると、眺望・立地の効用を消しすぎる。" },
+        },
+        rebuttal: { id: "condoEvidenceReply", label: "修繕積立不足で再反論", detail: "積立不足と同一棟成約を根拠に、眺望だけで上限へ寄せられないと返す。", wrongLabel: "眺望希少性を主張する", wrongDetail: "写真映えを価格の中心にする。", lesson: "眺望は根拠になるが、共用部リスクを消す根拠にはならない。" },
+        clientRebuttals: { defaultLine: "この眺めを見れば買主は納得します。管理の話を強く書きすぎでは。", rules: [{ evidence: docIds[0], line: "積立不足は管理組合全体の話で、私の部屋の価格にそこまで効きますか。" }, { evidence: docIds[1], line: "低層階の成約を持ち出すと、高層階の良さが薄まりませんか。" }] },
+        reportPressure: { client: "眺望プレミアムをもっと前に出したいんです。修繕の話は注記に回せませんか。", mentor: "魅力を書くのはよい。将来負担を注記へ逃がすな。" },
+        marketScenarios: [
+          { id: "condoReserveShock", title: "修繕一時金への警戒が上昇", detail: "買主が長期修繕計画と一時金リスクを強く見る局面。", appraisalHint: "積立不足と機械式駐車場を支える根拠にする。", supportEvidence: [docIds[0], spotIds[2]] },
+          { id: "condoViewErosion", title: "眺望プレミアムの持続性が低下", detail: "周辺新築で将来眺望が読みづらくなっている。", appraisalHint: "新築計画と同一棟成約を支える根拠にする。", supportEvidence: [spotIds[1], docIds[1]] },
+          { id: "condoUseLimit", title: "収益転用期待が後退", detail: "民泊禁止と管理規約が投資家需要を抑える。", appraisalHint: "管理規約と管理掲示を報告根拠にする。", supportEvidence: [docIds[2], spotIds[3]] },
+        ],
+        replayGoal: "次周目標: 眺望加点、積立不足、同一棟成約を分けて評価し、売主希望と管理リスクを両立させる。",
+      },
+      case008: {
+        mentorStart: "「ホテルは繁忙期の顔だけで見るな。年間NOI、FF&E、契約解除条項まで収益に戻せ。」",
+        priceDetail: "繁忙期実績ではなく、年間運営実績と改装費が見えている時点に固定する。",
+        subjectDetail: "土地建物に加え、ホテル運営契約、FF&E、季節変動を評価前提として切り分ける。",
+        priceMessage: "価格時点を固定した。繁忙期の勢いを年間NOIへ戻して評価する。",
+        subjectMessage: "ホテル評価の対象を確定した。建物だけでなく運営と改装費を見る。",
+        intake: {
+          body: "湖畔ホテルの売却相談。役員は繁忙期のADR上昇を強調し、閑散期稼働とFF&E更新費を後回しにしたい。",
+          clientLine: "夏の数字は強いんです。評価書では<span class=\"pressure-word\">繁忙期ベース</span>の勢いを見せたい。",
+          mentorLine: "繁忙期は事実だ。だがホテル価格は年間安定NOIと更新投資で説明する。",
+          issues: ["価格の種類: 事業用不動産の正常価格", "対象不動産: ホテル不動産と運営契約", "依頼者圧力: 繁忙期実績の年換算", "確認軸: ADR、稼働率、FF&E、委託契約"],
+          professionalTitle: "年間安定NOIへ標準化する",
+          professionalDetail: "繁忙期と閑散期を分け、更新費を控除して収益を読む。",
+          pressureTitle: "繁忙期実績を年換算する",
+          pressureDetail: "見栄えは良いが、年間収益と改装費の説明が崩れる。",
+        },
+        spotTerms: ["改装遅延", "宴会需要", "眺望価値", "設備更新", "人員宿舎"],
+        spotDetails: [
+          "客室改装の遅れは、ADR維持力とFF&E更新費に直結する。",
+          "宴会場の稼働低下は、宿泊以外の収益源が弱っているサインになる。",
+          "湖畔眺望は強みだが、季節変動を消す根拠にはならない。",
+          "ボイラー更新時期は、短期CAPEXとNOI調整に反映する。",
+          "従業員寮の老朽化は、採用・運営継続コストとして読む。",
+        ],
+        decoySpots: [
+          { id: "hotelDecoyA", label: "D1", x: 18, y: 26, title: "ロビーの季節装花", lesson: "雰囲気は良いが、ADR・稼働率・更新投資を支える根拠ではない。" },
+          { id: "hotelDecoyB", label: "D2", x: 84, y: 48, title: "SNS投稿用フォトスポット", lesson: "集客訴求は参考程度。評価では継続収益と契約条件を優先する。" },
+        ],
+        panels: [
+          { title: "運営会社ヒアリング", items: ["強調点: 夏季ADR上昇", "伏せたい点: 閑散期稼働とFF&E", "価格時点: 2026-05-05", "未確認事項: 委託契約の解除条項"] },
+          { title: "照合資料", items: ["ADR: 上昇だが稼働率は低下", "FF&E: 更新費未計上", "運営契約: 解約条項が重い"] },
+        ],
+        docDetails: [
+          "ADR上昇と稼働率低下を分けて、客室単価の強さと需要量の弱さを同時に見る。",
+          "FF&E更新費の未計上は、短期NOIを過大に見せる典型的な落とし穴になる。",
+          "運営委託契約の解約条項は、買主の運営自由度と事業リスクに効く。",
+        ],
+        decoyDocument: { title: "旅行サイトの高評価レビュー", detail: "接客と眺望を褒める口コミ抜粋。", lesson: "口コミは需要の補助情報。収益価格では、稼働率・ADR・費用を優先する。" },
+        appraisalCopy: {
+          methodBody: "ホテル価格は繁忙期月次を年換算せず、年間安定NOI、更新投資、運営契約を織り込む。",
+          methodChoices: [
+            { id: "A", label: "年間安定NOIで査定", detail: "ADR、稼働率、FF&E、委託契約を収益へ戻す。" },
+            { id: "B", label: "繁忙期NOIを年換算", detail: "売却資料として強いが、閑散期リスクを消す。" },
+            { id: "C", label: "湖畔ブランドを主採用", detail: "魅力はあるが、収益の裏付けが弱い。" },
+          ],
+          adjustmentBody: "事業収益リスクは、季節変動・FF&E・運営契約の根拠で支える。",
+          adjustmentChoices: [
+            { id: "risk", label: "年間NOIと更新費を反映", detail: "収益の持続性を価格に落とす。" },
+            { id: "soft", label: "繁忙期の強さを重く見る", detail: "売却には向くが、安定収益の説明が弱い。" },
+          ],
+        },
+        bands: {
+          thin: { label: "薄い収益リスク -5%", detail: "繁忙期ADR上昇を重く見て、更新費を軽く見る。", prompt: "薄い調整なら、年間稼働の改善資料が必要。", lesson: "繁忙期だけで薄く見ると、閑散期とFF&Eを過小評価する。" },
+          balanced: { label: "標準収益調整 -15%", detail: "年間NOI、FF&E、契約条項を反映する。", prompt: "標準収益調整を支える稼働・FF&E・設備カードを2枚選ぶ。", mentor: "ホテルの売上ではなく、安定NOIへ戻せた。評価らしい。" },
+          severe: { label: "運営再建調整 -34%", detail: "稼働低下と更新費を重く見て、買主を再生投資家に限定する。", prompt: "重い調整なら、運営継続が難しい資料が必要。", lesson: "更新費があるだけで再建級にすると、眺望とブランドの効用を消しすぎる。" },
+        },
+        rebuttal: { id: "hotelEvidenceReply", label: "年間NOIで再反論", detail: "ADR・稼働率とFF&Eを根拠に、繁忙期年換算を退ける。", wrongLabel: "夏季実績を代表値にする", wrongDetail: "繁忙期の勢いを通年収益として扱う。", lesson: "ホテル評価で繁忙期を代表値にすると、季節変動を消してしまう。" },
+        clientRebuttals: { defaultLine: "夏は満室です。買主もそこを評価するはずですよね。", rules: [{ evidence: docIds[0], line: "ADRは上がっています。稼働率の低下をそこまで重く見ますか。" }, { evidence: docIds[1], line: "FF&Eは買主が更新すればよい話ではありませんか。" }] },
+        reportPressure: { client: "繁忙期ベースの収益力をもっと前面に出したいんです。閑散期は注記で十分では。", mentor: "季節性を注記へ逃がすな。年間安定NOIで説明しろ。" },
+        marketScenarios: [
+          { id: "hotelFfeCapex", title: "FF&E更新費への警戒が上昇", detail: "買主が短期改装投資を強く控除する局面。", appraisalHint: "FF&E資料と客室改装遅れを支える根拠にする。", supportEvidence: [docIds[1], spotIds[0]] },
+          { id: "hotelOccupancyWeak", title: "稼働率低下が価格交渉の中心", detail: "ADR上昇より需要量の弱さが問題視されている。", appraisalHint: "ADR/稼働率資料と宴会場稼働を報告する。", supportEvidence: [docIds[0], spotIds[1]] },
+          { id: "hotelOperatorClause", title: "運営契約の自由度が重視", detail: "買主が委託契約の解約条項と人員コストを精査する。", appraisalHint: "運営契約と従業員寮を組み合わせる。", supportEvidence: [docIds[2], spotIds[4]] },
+        ],
+        replayGoal: "次周目標: 繁忙期実績、年間NOI、FF&E更新費を切り分け、ホテル収益の持続性を説明する。",
+      },
+      case009: {
+        mentorStart: "「物流は満床だけで評価するな。WALE、床荷重、バース、BCPが賃料の持続性を決める。」",
+        priceDetail: "主力テナントの解約権と市場賃料劣後が判明している時点に固定する。",
+        subjectDetail: "倉庫建物、賃貸借契約、物流機能、BCP負担を評価対象として切り分ける。",
+        priceMessage: "価格時点を固定した。満床の見た目ではなく、退去リスクと再賃貸力で読む。",
+        subjectMessage: "物流倉庫の対象範囲を確定した。建物面積だけでなく機能と契約を見る。",
+        intake: {
+          body: "物流倉庫の売却前評価。担当者は満床稼働を強調し、大型テナントの解約権と機能劣後を弱く見せたい。",
+          clientLine: "いまは満床です。投資家向けには<span class=\"pressure-word\">満床前提</span>で強く見せたいんです。",
+          mentorLine: "満床は現在の状態だ。評価では、いつまで賃料が続くか、退去後に再賃貸できるかを見る。",
+          issues: ["価格の種類: 物流倉庫の収益価格", "対象不動産: 倉庫機能と賃貸借契約", "依頼者圧力: 満床状態の過大評価", "確認軸: WALE、テナント集中、床荷重、BCP"],
+          professionalTitle: "賃料の持続性で受任する",
+          professionalDetail: "満床状態と再賃貸リスクを分けて収益価格を説明する。",
+          pressureTitle: "満床稼働をそのまま将来へ伸ばす",
+          pressureDetail: "表面利回りは強くなるが、解約権と機能劣後を説明できない。",
+        },
+        spotTerms: ["接車制限", "床荷重", "テナント集中", "BCP", "附帯収益"],
+        spotDetails: [
+          "一部バースの接車制限は、テナント代替性と再賃貸期間に効く。",
+          "床荷重表示の古さは、現代物流ニーズに対する機能劣後の根拠になる。",
+          "大型テナント専用区画は、退去時の空室インパクトを大きくする。",
+          "浸水想定区域の掲示は、BCP費用と保険料上昇に接続する。",
+          "太陽光屋根の賃貸範囲は、収益帰属と維持負担を確認する入口になる。",
+        ],
+        decoySpots: [
+          { id: "logisticsDecoyA", label: "D1", x: 18, y: 26, title: "新しい社名サイン", lesson: "テナント名の見栄えより、契約残存と機能適合を確認する。" },
+          { id: "logisticsDecoyB", label: "D2", x: 84, y: 48, title: "搬入口の清掃状態", lesson: "清掃状態は印象に留まり、床荷重やバース制限ほど賃料持続性を説明しない。" },
+        ],
+        panels: [
+          { title: "売却担当者メモ", items: ["強調点: 現在満床", "伏せたい点: 主力テナント解約権", "価格時点: 2026-05-05", "未確認事項: BCP費用と市場賃料差"] },
+          { title: "照合資料", items: ["契約: 主力テナント解約通知権あり", "賃料: 新築倉庫に劣後", "費用: 保険料とBCP費用が上昇"] },
+        ],
+        docDetails: [
+          "主力テナントの解約通知権は、満床前提を将来へ伸ばせない根拠になる。",
+          "市場賃料が新築倉庫に劣後すると、退去後の再賃貸賃料を慎重に見る必要がある。",
+          "保険料とBCP費用の上昇は、NOIを直接押し下げる。",
+        ],
+        decoyDocument: { title: "満床稼働の営業資料", detail: "稼働率100%を大きく示した投資家向け資料。", lesson: "現在満床は重要だが、WALEと解約権を見ないと将来収益を過大評価する。" },
+        appraisalCopy: {
+          methodBody: "物流倉庫は現行賃料だけでなく、WALE、機能劣後、BCP費用を収益の持続性へ戻す。",
+          methodChoices: [
+            { id: "A", label: "WALEと再賃貸リスクで査定", detail: "解約権、機能、BCP費用を収益価格に接続する。" },
+            { id: "B", label: "満床NOIをそのまま採用", detail: "表面利回りは強いが、退去リスクが薄い。" },
+            { id: "C", label: "大型テナントの信用力を主採用", detail: "現在は安定して見えるが、解約権を消してしまう。" },
+          ],
+          adjustmentBody: "物流機能リスクは、接車・床荷重・テナント集中・BCP費用で支える。",
+          adjustmentChoices: [
+            { id: "risk", label: "物流機能と契約リスクを反映", detail: "収益の持続性と再賃貸リスクを価格に落とす。" },
+            { id: "soft", label: "満床稼働を重く見る", detail: "投資家説明には強いが、退去後の評価が弱い。" },
+          ],
+        },
+        bands: {
+          thin: { label: "薄い物流リスク -5%", detail: "現況満床を重視し、退去後リスクを軽く見る。", prompt: "薄い調整なら、長期契約か代替テナント需要の根拠が必要。", lesson: "解約権があるのに薄く見ると、WALE確認の意味が消える。" },
+          balanced: { label: "標準物流調整 -13%", detail: "WALE、機能劣後、BCP費用を反映する。", prompt: "標準物流調整を支える契約・床荷重・BCPカードを2枚選ぶ。", mentor: "満床の見た目から、賃料の持続性へ評価を戻せた。" },
+          severe: { label: "再賃貸難調整 -30%", detail: "退去時の長期空室を重く見て、買主を限定する。", prompt: "重い調整なら、機能不適合が決定的な資料が必要。", lesson: "退去可能性だけで過度に下げると、現況収益の安定性を消しすぎる。" },
+        },
+        rebuttal: { id: "logisticsEvidenceReply", label: "解約権とWALEで再反論", detail: "主力テナント解約権とWALEを根拠に、満床前提を将来へ伸ばせないと返す。", wrongLabel: "満床稼働を代表値にする", wrongDetail: "現況100%をそのまま安定収益と見る。", lesson: "満床状態と収益持続性は別。解約権を無視すると監査で弱い。" },
+        clientRebuttals: { defaultLine: "満床の倉庫なんです。投資家はそこを一番見るはずですよね。", rules: [{ evidence: docIds[0], line: "解約通知権は形式です。実際には長く使ってくれますよ。" }, { evidence: docIds[1], line: "新築と比べるのは厳しすぎませんか。賃料は取れています。" }] },
+        reportPressure: { client: "満床前提の収益力をもっと強く見せたいんです。退去リスクは注記で十分では。", mentor: "注記ではなく、収益価格の中に反映しろ。" },
+        marketScenarios: [
+          { id: "logisticsWaleShort", title: "WALE短期化が投資家の焦点", detail: "主力テナントの解約権が利回り交渉に直結している。", appraisalHint: "解約権資料と専用区画を支える根拠にする。", supportEvidence: [docIds[0], spotIds[2]] },
+          { id: "logisticsFunctionGap", title: "機能劣後が再賃貸力を下げる", detail: "新築倉庫との床荷重・バース性能差が重視される。", appraisalHint: "市場賃料劣後と接車制限を報告する。", supportEvidence: [docIds[1], spotIds[0]] },
+          { id: "logisticsBcpCost", title: "BCP費用がNOIを圧迫", detail: "浸水・保険料・防災対応費が買主DDで問題化している。", appraisalHint: "BCP費用と浸水掲示を組み合わせる。", supportEvidence: [docIds[2], spotIds[3]] },
+        ],
+        replayGoal: "次周目標: 満床、WALE、機能劣後、BCP費用を分けて、物流収益の持続性を説明する。",
+      },
+      case010: {
+        mentorStart: "「海外案件は円換算の見栄えに飛びつくな。現地前提、為替時点、権利期間を翻訳して監査する。」",
+        priceDetail: "現地鑑定書の前提条件と採用為替レートが確認できる時点に固定する。",
+        subjectDetail: "現地不動産、借地残存期間、現地規制、円換算条件をレビュー対象に含める。",
+        priceMessage: "価格時点を固定した。円建て表示の前に、現地価格と為替を分けて見る。",
+        subjectMessage: "海外案件の対象範囲を確定した。国内向け説明では、現地前提の翻訳が必要になる。",
+        intake: {
+          body: "海外ファンドの国内説明用レビュー。担当者は円換算の見栄えを気にし、現地鑑定書の限定条件と借地残存期間を弱く扱いたい。",
+          clientLine: "投資委員会には円建てで説明します。できれば<span class=\"pressure-word\">円建てで高く</span>見せたいんです。",
+          mentorLine: "円換算は説明形式だ。評価レビューでは、現地前提と為替時点を分けて監査する。",
+          issues: ["価格の種類: 海外評価レビュー", "対象不動産: 現地権利・規制・為替条件", "依頼者圧力: 円建て表示の見栄え", "確認軸: IVS前提、為替時点、借地残存期間"],
+          professionalTitle: "現地前提を日本語で説明する",
+          professionalDetail: "現地鑑定書の限定条件と円換算の前提を切り分ける。",
+          pressureTitle: "円建て金額を主役にする",
+          pressureDetail: "数字は大きく見えるが、現地価格と為替差が混ざる。",
+        },
+        spotTerms: ["権利期間", "現地管理", "災害対策", "周辺開発", "空室表示"],
+        spotDetails: [
+          "借地期間の残存表示は、価格期間と更新リスクの中心論点になる。",
+          "現地管理会社の掲示は、資料作成者と管理実態を照合する入口になる。",
+          "洪水対策設備は、現地災害リスクと保険・修繕費に接続する。",
+          "周辺再開発の工事は、将来需要と一時的な施工影響を分けて見る必要がある。",
+          "現地看板の空室募集は、稼働前提と市場賃料を確認する根拠になる。",
+        ],
+        decoySpots: [
+          { id: "overseasDecoyA", label: "D1", x: 18, y: 26, title: "高級ブランドの路面看板", lesson: "周辺ブランドは印象にはなるが、現地権利期間や為替前提を説明しない。" },
+          { id: "overseasDecoyB", label: "D2", x: 84, y: 48, title: "観光客向け案内板", lesson: "観光地らしさより、現地鑑定書の前提条件を優先して読む。" },
+        ],
+        panels: [
+          { title: "ファンド提出メモ", items: ["強調点: 円建て価格の見栄え", "伏せたい点: 現地鑑定の限定条件", "価格時点: 2026-05-05", "未確認事項: 為替レート採用時点"] },
+          { title: "照合資料", items: ["現地鑑定書: 前提条件が限定的", "為替: 採用時点がずれる", "借地: 残存期間が価格に影響"] },
+        ],
+        docDetails: [
+          "現地鑑定書の限定条件は、日本側レビューでそのまま結論に使えない前提を示す。",
+          "為替レートの採用時点がずれると、現地価格変動と円換算差が混ざる。",
+          "借地残存期間は、現地不動産の権利価値と出口リスクに直接効く。",
+        ],
+        decoyDocument: { title: "為替が有利な日の社内メモ", detail: "円建て価格が最も大きく見える日の換算表。", lesson: "任意の日の為替だけを採ると、価格時点とレビュー前提が崩れる。" },
+        appraisalCopy: {
+          methodBody: "海外評価レビューでは、現地鑑定の前提、権利期間、為替時点を日本語の説明責任へ翻訳する。",
+          methodChoices: [
+            { id: "A", label: "現地前提と為替時点をレビュー", detail: "IVS前提、借地残存、円換算を分けて確認する。" },
+            { id: "B", label: "円建て価格の見栄えを主採用", detail: "説明は強いが、為替と現地価格が混ざる。" },
+            { id: "C", label: "現地鑑定書をそのまま採用", detail: "速いが、日本側の説明責任が弱い。" },
+          ],
+          adjustmentBody: "為替・権利期間調整は、現地鑑定条件、採用為替、借地残存で支える。",
+          adjustmentChoices: [
+            { id: "risk", label: "現地前提と為替差を反映", detail: "レビューとして説明できる価格に戻す。" },
+            { id: "soft", label: "円建て見栄えを重く見る", detail: "投資委員会向けには強いが、前提条件が曖昧になる。" },
+          ],
+        },
+        bands: {
+          thin: { label: "薄い海外調整 -4%", detail: "現地鑑定書を信頼し、為替差だけを軽く注記する。", prompt: "薄い調整なら、現地前提が日本側でも通る根拠が必要。", lesson: "限定条件を薄く見ると、レビューの役割がなくなる。" },
+          balanced: { label: "標準レビュー調整 -12%", detail: "現地前提、為替時点、借地残存期間を反映する。", prompt: "標準レビュー調整を支える現地前提・為替・権利カードを2枚選ぶ。", mentor: "円建て表示と現地前提を分離できた。海外レビューらしい。" },
+          severe: { label: "前提不確実性調整 -28%", detail: "現地資料の限定性を重く見て、大きく保守的に見る。", prompt: "重い調整なら、現地前提が崩れる資料が必要。", lesson: "資料限定だけで過度に下げると、現地鑑定の有効部分まで消してしまう。" },
+        },
+        rebuttal: { id: "overseasEvidenceReply", label: "現地前提と為替時点で再反論", detail: "現地鑑定書の限定条件と為替時点を根拠に、円建て見栄えだけで説明できないと返す。", wrongLabel: "有利な為替日で説明する", wrongDetail: "円換算額を高く見せる日付を使う。", lesson: "為替時点を選ぶと、価格時点とレビュー前提が崩れる。" },
+        clientRebuttals: { defaultLine: "投資委員会には円建ての数字が一番伝わります。現地の細かい条件まで必要ですか。", rules: [{ evidence: docIds[0], line: "現地鑑定書があるなら、そのまま使って問題ないのでは。" }, { evidence: docIds[1], line: "為替は日々動くので、有利な時点で説明してもよいのでは。" }] },
+        reportPressure: { client: "円建てで高く見える説明にしたいんです。現地の限定条件は脚注に回せませんか。", mentor: "脚注に逃がすな。海外レビューの本文で前提条件を翻訳しろ。" },
+        marketScenarios: [
+          { id: "overseasFxSwing", title: "為替感応度が投資委員会の焦点", detail: "円換算額のブレが投資判断を左右している。", appraisalHint: "為替時点と感応度を支える根拠にする。", supportEvidence: [docIds[1], spotIds[4]] },
+          { id: "overseasLeaseTerm", title: "借地残存期間が出口価格を制約", detail: "現地買主が権利期間と更新可能性を厳しく見る。", appraisalHint: "借地残存と現地鑑定前提を報告する。", supportEvidence: [docIds[2], spotIds[0]] },
+          { id: "overseasLocalRisk", title: "現地災害・規制リスクが表面化", detail: "洪水対策と管理実態の説明を求められている。", appraisalHint: "洪水対策設備と現地管理を組み合わせる。", supportEvidence: [spotIds[2], spotIds[1]] },
+        ],
+        replayGoal: "次周目標: 現地前提、為替時点、借地残存期間を分離し、円建て表示に飲まれないレビューを作る。",
+      },
+    };
+    return map[caseId] ?? {};
+  }
+
   compactCases.forEach((item) => {
     const spotIds = ["A", "B", "C", "D", "E"].map((suffix) => `${item.prefix}Spot${suffix}`);
     const docIds = ["A", "B", "C"].map((suffix) => `${item.prefix}Doc${suffix}`);
+    const narrative = compactCaseNarrative(item.caseId, spotIds, docIds);
+    const intake = narrative.intake ?? {};
+    const appraisalCopy = narrative.appraisalCopy ?? {};
     addCase({
       caseId: item.caseId,
       prefix: item.prefix,
@@ -811,39 +1150,39 @@
       fallbackImage: item.fallbackImage,
       imageAlt: `${item.shortTitle}の現地写真。${item.spots.join("、")}が見える。`,
       client: { name: item.clientName, initial: item.clientName.slice(0, 1), portraitClass: item.portraitClass, tension: item.tension },
-      mentorStart: `「${item.methodTerm}は言葉だけで使うな。資料、現地、契約をつないで説明しろ。」`,
+      mentorStart: narrative.mentorStart ?? `「${item.methodTerm}は言葉だけで使うな。資料、現地、契約をつないで説明しろ。」`,
       priceTitle: `${item.topic}の価格時点を固定`,
-      priceDetail: "価格時点で判明している市場条件と契約条件を固定する。",
+      priceDetail: narrative.priceDetail ?? "価格時点で判明している市場条件と契約条件を固定する。",
       subjectTitle: `${item.shortTitle}の対象範囲を確定`,
-      subjectDetail: "土地、建物、権利、契約上の制限を評価対象として切り分ける。",
-      priceMessage: "価格時点を固定した。依頼者の見せたい数字を、説明できる前提条件へ戻して進める。",
-      subjectMessage: "対象不動産を確定した。権利と契約条件を先に閉じる。",
+      subjectDetail: narrative.subjectDetail ?? "土地、建物、権利、契約上の制限を評価対象として切り分ける。",
+      priceMessage: narrative.priceMessage ?? "価格時点を固定した。依頼者の見せたい数字を、説明できる前提条件へ戻して進める。",
+      subjectMessage: narrative.subjectMessage ?? "対象不動産を確定した。権利と契約条件を先に閉じる。",
       intake: {
         chip: "依頼目的",
-        title: `${item.topic}の把握`,
-        body: `${item.shortTitle}について、依頼者の利害が強く出る評価依頼。資料の見せ方に偏りがある。`,
-        clientLine: `今回は事情があるので、できれば<span class=\"pressure-word\">${item.pressureWord}</span>見ていただけると助かります。`,
-        mentorLine: "依頼者の都合は聞く。ただし、評価額は根拠と前提条件からしか組み立てない。",
-        issues: ["価格の種類: 正常価格として扱えるか", `対象不動産: ${item.topic}の権利・契約条件`, "依頼者圧力: 数字の見せ方への誘導", `確認軸: ${item.methodTerm}と${item.adjustmentTerm}`],
-        professionalTitle: "正常価格を軸に受任し、前提条件を固定する",
-        professionalDetail: "依頼者の事情ではなく、現地・資料・市場条件で説明する。",
-        pressureTitle: "依頼者の見せたい前提を重く見る",
-        pressureDetail: "短期的には通しやすいが、評価書の説明責任が弱くなる。",
+        title: intake.title ?? `${item.topic}の把握`,
+        body: intake.body ?? `${item.shortTitle}について、依頼者の利害が強く出る評価依頼。資料の見せ方に偏りがある。`,
+        clientLine: intake.clientLine ?? `今回は事情があるので、できれば<span class=\"pressure-word\">${item.pressureWord}</span>見ていただけると助かります。`,
+        mentorLine: intake.mentorLine ?? "依頼者の都合は聞く。ただし、評価額は根拠と前提条件からしか組み立てない。",
+        issues: intake.issues ?? ["価格の種類: 正常価格として扱えるか", `対象不動産: ${item.topic}の権利・契約条件`, "依頼者圧力: 数字の見せ方への誘導", `確認軸: ${item.methodTerm}と${item.adjustmentTerm}`],
+        professionalTitle: intake.professionalTitle ?? "正常価格を軸に受任し、前提条件を固定する",
+        professionalDetail: intake.professionalDetail ?? "依頼者の事情ではなく、現地・資料・市場条件で説明する。",
+        pressureTitle: intake.pressureTitle ?? "依頼者の見せたい前提を重く見る",
+        pressureDetail: intake.pressureDetail ?? "短期的には通しやすいが、評価書の説明責任が弱くなる。",
       },
       spots: item.spots.map((title, index) => ({
         id: spotIds[index],
-        term: ["価格形成要因", "個別的要因", "契約リスク", "市場性", "運営リスク"][index],
+        term: narrative.spotTerms?.[index] ?? ["価格形成要因", "個別的要因", "契約リスク", "市場性", "運営リスク"][index],
         title,
-        detail: `${title}は、${item.topic}の価格判断に影響する。`,
+        detail: narrative.spotDetails?.[index] ?? `${title}は、${item.topic}の価格判断に影響する。`,
         x: [35, 66, 24, 78, 52][index],
         y: [42, 30, 68, 75, 56][index],
         scores: { investigation: index < 3 ? 8 : 6, appraisal: 4, reasoning: index === 2 ? 4 : 2 },
       })),
-      decoySpots: [
+      decoySpots: narrative.decoySpots ?? [
         { id: `${item.prefix}DecoyA`, label: "D1", x: 18, y: 26, title: "新しい案内看板", lesson: "新しい表示や営業上の印象は、価格形成要因として直接効く根拠とは限らない。" },
         { id: `${item.prefix}DecoyB`, label: "D2", x: 84, y: 48, title: "清掃された外観", lesson: "見た目の清潔感より、継続的な収益・権利・市場性の根拠を優先する。" },
       ],
-      panels: [
+      panels: narrative.panels ?? [
         { title: "依頼者提出資料", items: [`依頼者説明: ${item.pressureWord}見せたい`, `評価対象: ${item.topic}`, "価格時点: 2026-05-05", "未確認事項: 契約条件と市場資料"] },
         { title: "照合資料", items: item.docs.map((doc) => `確認事項: ${doc}`) },
       ],
@@ -852,9 +1191,9 @@
         term: [item.methodTerm, item.adjustmentTerm, "前提条件"][index],
         title: `${doc}を確認`,
         evidenceTitle: doc,
-        detail: `${doc}。依頼者説明だけではなく、資料照合で価格への影響を判断する。`,
+        detail: narrative.docDetails?.[index] ?? `${doc}。依頼者説明だけではなく、資料照合で価格への影響を判断する。`,
       })),
-      decoyDocuments: [{ id: `${item.prefix}DecoyDoc`, title: "販売パンフレット", detail: "魅力的な写真と強いコピーの販売資料。", lesson: "販売資料は訴求であり、価格形成要因そのものではない。契約・収益・市場資料で裏取りする。" }],
+      decoyDocuments: [{ id: `${item.prefix}DecoyDoc`, ...(narrative.decoyDocument ?? { title: "販売パンフレット", detail: "魅力的な写真と強いコピーの販売資料。", lesson: "販売資料は訴求であり、価格形成要因そのものではない。契約・収益・市場資料で裏取りする。" }) }],
       mechanic: {
         term: item.mechanicTerm,
         title: item.mechanicTitle,
@@ -876,35 +1215,35 @@
       appraisalCopy: {
         methodTerm: item.methodTerm,
         methodTitle: item.methodTitle,
-        methodBody: `${item.topic}の判断は、依頼者説明を起点に市場資料と契約条件へつなぐ。`,
-        methodChoices: [
+        methodBody: appraisalCopy.methodBody ?? `${item.topic}の判断は、依頼者説明を起点に市場資料と契約条件へつなぐ。`,
+        methodChoices: appraisalCopy.methodChoices ?? [
           { id: "A", label: `${item.methodTerm}を主軸に査定`, detail: "現地、資料、契約条件を関連づけて価格を組み立てる。" },
           { id: "B", label: "見た目の近い事例を主採用", detail: "比較しやすいが、権利・収益・契約条件が薄い。" },
           { id: "C", label: "依頼者提示資料を主採用", detail: "説明は速いが、資料裏付けと裁量範囲の説明が弱い。" },
         ],
         adjustmentTerm: item.adjustmentTerm,
         adjustmentTitle: item.adjustmentTitle,
-        adjustmentBody: "選んだ調整幅を、証拠カードと市場条件で支える。",
-        adjustmentChoices: [
+        adjustmentBody: appraisalCopy.adjustmentBody ?? "選んだ調整幅を、証拠カードと市場条件で支える。",
+        adjustmentChoices: appraisalCopy.adjustmentChoices ?? [
           { id: "risk", label: `${item.adjustmentTerm}を反映`, detail: "価格形成要因として説明できる範囲で反映する。" },
           { id: "soft", label: "依頼者説明を尊重し軽微扱い", detail: "通しやすいが、調査結果と価格の接続が弱くなる。" },
         ],
       },
-      bands: {
+      bands: narrative.bands ?? {
         thin: { label: "薄い調整 -5%", detail: "依頼者説明を重く見て、リスクを注記に留める。", prompt: "薄い調整なら、強い市場性を支える根拠が必要。", lesson: "見落としたリスクを注記だけにすると、価格への反映が弱い。" },
         balanced: { label: "標準調整 -12%", detail: `${item.adjustmentTerm}を市場参加者の判断として反映する。`, prompt: `${item.adjustmentTerm}を支える資料・現地カードを2枚選ぶ。`, mentor: "現地と資料が調整幅につながった。説明責任がある。" },
         severe: { label: "過度調整 -28%", detail: "リスクを重大視し、買主層を大きく限定する。", prompt: "過度調整なら決定的な資料が必要。", lesson: "不確実性はあるが、取得資料だけで過度に下げると根拠を超える。" },
       },
-      rebuttal: { id: `${item.prefix}EvidenceReply`, label: `${item.docs[0]}で再反論`, detail: "依頼者の反論に、最初の重要資料を根拠として返す。", wrongLabel: "依頼者の事情を条件付きで採る", wrongDetail: "価格前提に依頼者説明を残す。", lesson: "依頼者事情は聞くが、評価額を支える根拠とは分ける。" },
-      clientRebuttals: { defaultLine: "そこまで厳しく見ると、こちらの事情が反映されません。", rules: [{ evidence: docIds[0], line: `${item.docs[0]}は、そこまで価格に効くものですか。` }, { evidence: docIds[1], line: "それは一時的な問題として扱えませんか。" }] },
-      reportPressure: { client: `今回は${item.pressureWord}見せたいんです。表現だけでも調整できませんか。`, mentor: "表現は変えられる。根拠は変えるな。事実、分析、結論の順に返せ。" },
-      marketScenarios: [
+      rebuttal: narrative.rebuttal ?? { id: `${item.prefix}EvidenceReply`, label: `${item.docs[0]}で再反論`, detail: "依頼者の反論に、最初の重要資料を根拠として返す。", wrongLabel: "依頼者の事情を条件付きで採る", wrongDetail: "価格前提に依頼者説明を残す。", lesson: "依頼者事情は聞くが、評価額を支える根拠とは分ける。" },
+      clientRebuttals: narrative.clientRebuttals ?? { defaultLine: "そこまで厳しく見ると、こちらの事情が反映されません。", rules: [{ evidence: docIds[0], line: `${item.docs[0]}は、そこまで価格に効くものですか。` }, { evidence: docIds[1], line: "それは一時的な問題として扱えませんか。" }] },
+      reportPressure: narrative.reportPressure ?? { client: `今回は${item.pressureWord}見せたいんです。表現だけでも調整できませんか。`, mentor: "表現は変えられる。根拠は変えるな。事実、分析、結論の順に返せ。" },
+      marketScenarios: narrative.marketScenarios ?? [
         { id: `${item.prefix}Risk`, title: `${item.adjustmentTerm}への警戒が上昇`, detail: "市場参加者が契約・運営・権利リスクを強く見る局面。", appraisalHint: "重要資料と現地リスクを支える根拠にする。", supportEvidence: [docIds[0], spotIds[0]] },
         { id: `${item.prefix}Demand`, title: "買主層が選別的に変化", detail: "表面利回りや見た目より、裏付け資料の精度が重視されている。", appraisalHint: "資料照合と検算結果を支える根拠にする。", supportEvidence: [docIds[1], docIds[2]] },
         { id: `${item.prefix}Disclosure`, title: "重要事項の開示要求が上昇", detail: "買主・監査側が契約条件、運営実績、権利調整の説明責任を強く求めている。", appraisalHint: "現地リスクと最終資料を組み合わせて報告する。", supportEvidence: [spotIds[1], docIds[2]] },
       ],
       tutorials: {},
-      replayGoal: `次周目標: ${item.methodTerm}、${item.adjustmentTerm}、重要資料を事実→分析→結論で提示する。`,
+      replayGoal: narrative.replayGoal ?? `次周目標: ${item.methodTerm}、${item.adjustmentTerm}、重要資料を事実→分析→結論で提示する。`,
     });
   });
 })();

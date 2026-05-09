@@ -29,7 +29,11 @@ node --check scenario-engine.js
 node --check gameplay-cast.js
 node --check case-schema.js
 node --check scripts/generate-image-assets.mjs
+node --check scripts/refresh-image-assets.mjs
+node --check scripts/adopt-image-asset.mjs
+node --check scripts/validate-assets-manifest.mjs
 node --check tests/appraisal-detective-flow.spec.js
+npm run validate:assets
 npm run test:e2e
 npm run test:production
 npm run test:persona
@@ -39,7 +43,7 @@ curl -I http://127.0.0.1:44561/
 
 結果:
 
-- `npm run test:e2e`: `80 passed`
+- `npm run test:e2e`: `81 passed`（2026-05-08 画像アセット運用ハードニング後）
 - `npm run test:production`: `production_server_checks=passed`
 - `npm run test:persona`: `persona_gate_type=spec_coverage_not_human_commercial_quality`, `persona_average=100.0`
 - `npm run test:switch-readiness`: `switch_readiness_checks=passed`
@@ -90,4 +94,3 @@ CSP必須の正式本番: 未完了
 Cloudflare/Netlify実デプロイ: 未実施（CLI/環境変数なし）
 人間プレイテスト: 未実施
 ```
-

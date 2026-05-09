@@ -117,6 +117,13 @@
       for (const key of ["reviewStatus", "reviewedAt", "reviewer", "aiDisclosureCategory"]) {
         if (!nonEmptyString(asset[key])) errors.push(`${asset.file}.${key} must be a non-empty string`);
       }
+      for (const key of ["generationPath", "promptHash", "selectedBy", "selectionReason"]) {
+        if (!nonEmptyString(asset[key])) errors.push(`${asset.file}.${key} must be a non-empty string`);
+      }
+      if (asset.prompt !== undefined) errors.push(`${asset.file}.prompt must not be present in public assets-manifest.json`);
+      if (asset.sourceArtifactPath !== undefined) {
+        errors.push(`${asset.file}.sourceArtifactPath must not be present in public assets-manifest.json`);
+      }
       if (typeof asset.storeUseAllowed !== "boolean") errors.push(`${asset.file}.storeUseAllowed must be boolean`);
     }
   }

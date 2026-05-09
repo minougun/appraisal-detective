@@ -94,3 +94,62 @@ CSP必須の正式本番: 未完了
 Cloudflare/Netlify実デプロイ: 未実施（CLI/環境変数なし）
 人間プレイテスト: 未実施
 ```
+
+## 2026-05-09 UIレビュー修正デプロイ
+
+対象:
+
+- Branch: `main`
+- Public URL: `https://minougun.github.io/appraisal-detective/`
+- Cache-bust marker: `20260509-ui-review-fix`
+
+実施内容:
+
+- Chrome確認で見つかったモバイル上部メタ情報の折り返し、案件選択CTAの見え方、フェーズ切替表示、証拠ボードの縦詰まりを修正。
+- `index.html` の `app.js` / `styles.css` 読み込みクエリを `20260509-ui-review-fix` に更新。
+- 画像アセット検証、採用、再生成スクリプトと商業ケース拡張を公開対象に含めた。
+
+ローカル検証:
+
+```bash
+node --check app.js
+node --check scoring.js
+node --check scenario-engine.js
+node --check gameplay-cast.js
+node --check case-schema.js
+node --check scripts/validate-assets-manifest.mjs
+node --check tests/appraisal-detective-flow.spec.js
+npm run validate:assets
+npm run test:production
+npm run test:persona
+npm run test:switch-readiness
+npx playwright test tests --reporter=line --workers=1
+```
+
+結果:
+
+- `npx playwright test tests --reporter=line --workers=1`: `85 passed`
+- `npm run test:production`: `production_server_checks=passed`
+- `npm run validate:assets`: `asset_manifest_ok=true`, `asset_manifest_assets=22`
+- `npm run test:persona`: `persona_average=100.0`
+- `npm run test:switch-readiness`: `switch_readiness_checks=passed`
+- Windows Chrome headlessで mobile `390x844` と desktop `1440x1000` を確認。
+
+公開URL検証:
+
+```bash
+curl -I https://minougun.github.io/appraisal-detective/
+curl -I 'https://minougun.github.io/appraisal-detective/app.js?v=20260509-ui-review-fix'
+curl -I 'https://minougun.github.io/appraisal-detective/styles.css?v=20260509-ui-review-fix'
+```
+
+結果:
+
+- `https://minougun.github.io/appraisal-detective/`: `200`
+- `app.js?v=20260509-ui-review-fix`: `200`
+- `styles.css?v=20260509-ui-review-fix`: `200`
+- `20260509-ui-review-fix` marker の反映を確認。
+
+残リスク:
+
+- GitHub Pagesの制約により、HTTP response headerとしてのCSP等は引き続き未反映。公開βとして扱う。

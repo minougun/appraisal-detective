@@ -2497,15 +2497,15 @@ body.low-stimulus .result-celebration::after {
 }
 
 .case-file-desk.case-selecting .case-file-left.case-file-selected {
-  transform: translateX(calc(100% + clamp(14px, 2.2vw, 24px))) translateY(-18px) rotate(0deg) scale(1.16);
+  transform: translateX(var(--case-select-x, calc(100% + clamp(14px, 2.2vw, 24px)))) translateY(-18px) rotate(0deg) scale(1.16);
 }
 
 .case-file-desk.case-selecting .case-file-center.case-file-selected {
-  transform: translateY(-18px) rotate(0deg) scale(1.16);
+  transform: translateX(var(--case-select-x, 0px)) translateY(-18px) rotate(0deg) scale(1.16);
 }
 
 .case-file-desk.case-selecting .case-file-right.case-file-selected {
-  transform: translateX(calc(-100% - clamp(14px, 2.2vw, 24px))) translateY(-18px) rotate(0deg) scale(1.16);
+  transform: translateX(var(--case-select-x, calc(-100% - clamp(14px, 2.2vw, 24px)))) translateY(-18px) rotate(0deg) scale(1.16);
 }
 
 .case-file-desk.case-selecting .case-file-selected .case-file-folder {

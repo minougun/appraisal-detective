@@ -1149,6 +1149,13 @@ function animateCaseSelection(button) {
     file.classList.toggle("case-file-dismissed", !selected);
     if (selected) selectedFile = file;
   });
+  if (selectedFile) {
+    const deskRect = desk.getBoundingClientRect();
+    const selectedRect = selectedFile.getBoundingClientRect();
+    const deskCenter = deskRect.left + deskRect.width / 2;
+    const fileCenter = selectedRect.left + selectedRect.width / 2;
+    selectedFile.style.setProperty("--case-select-x", `${Math.round(deskCenter - fileCenter)}px`);
+  }
   announce(`事件ファイルを選択。${caseDefinitions[selectedCaseId]?.shortTitle ?? "案件"}を開きます。`);
   if (motionReduced.matches) {
     resetCase({ caseId: selectedCaseId, challengeMode });

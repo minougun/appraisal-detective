@@ -512,6 +512,13 @@ test("case file selection centers the chosen file before opening", async ({ page
   await expect(page.locator('[data-case-file="case002"]')).toHaveClass(/case-file-selected/);
   await expect(page.locator(".case-file-dismissed")).toHaveCount(9);
   await expect(page.locator('[data-case-file="case002"] .case-file-folder')).toBeDisabled();
+  await page.waitForTimeout(780);
+  const centerDelta = await page.evaluate(() => {
+    const deskRect = document.querySelector(".case-file-desk").getBoundingClientRect();
+    const selectedRect = document.querySelector('[data-case-file="case002"]').getBoundingClientRect();
+    return Math.abs(deskRect.left + deskRect.width / 2 - (selectedRect.left + selectedRect.width / 2));
+  });
+  expect(centerDelta).toBeLessThanOrEqual(8);
 
   await expect(page.locator(".novel-scene .novel-box")).toContainText("駅前商業地の依頼ファイル");
 });

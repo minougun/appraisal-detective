@@ -16,6 +16,8 @@ try {
   const app = await fetch(`http://127.0.0.1:${port}/app.js`);
   const asset = await fetch(`http://127.0.0.1:${port}/assets/fonts/NotoSansJP-VF.ttf`, { method: "HEAD" });
   const bgm = await fetch(`http://127.0.0.1:${port}/assets/audio/mixkit-echoes-188.mp3`, { method: "HEAD" });
+  const voicevox = await fetch(`http://127.0.0.1:${port}/voicevox/version`);
+  const voicevoxBlocked = await fetch(`http://127.0.0.1:${port}/voicevox/user_dict`);
   const missing = await fetch(`http://127.0.0.1:${port}/../../AGENTS.md`);
   const malformed = await fetch(`http://127.0.0.1:${port}/%E0%A4%A`);
   const afterMalformed = await fetch(`http://127.0.0.1:${port}/`, { method: "HEAD" });
@@ -24,6 +26,8 @@ try {
   assert(app.ok, "app.js should be served");
   assert(asset.ok, "font should be served");
   assert(bgm.ok, "BGM should be served");
+  assert([200, 503].includes(voicevox.status), "VOICEVOX proxy should either reach the local engine or fail closed");
+  assert(voicevoxBlocked.status === 404, "VOICEVOX proxy should only expose the allowlisted synthesis endpoints");
   assert(missing.status === 400 || missing.status === 404, "path traversal should not expose files");
   assert(malformed.status === 400, "malformed percent-encoded paths should be rejected");
   assert(afterMalformed.ok, "server should continue serving after malformed path rejection");
@@ -31,7 +35,11 @@ try {
   const csp = index.headers.get("content-security-policy") ?? "";
   assert(csp.includes("script-src 'self'"), "CSP should restrict scripts to self");
   assert(csp.includes("style-src 'self'"), "CSP should restrict styles to self");
-  assert(csp.includes("media-src 'self'"), "CSP should allow local BGM only");
+  assert(csp.includes("media-src 'self' blob:"), "CSP should allow local BGM and synthesized voice blobs");
+  assert(
+    csp.includes("connect-src 'self' http://127.0.0.1:50021 http://localhost:50021"),
+    "CSP should allow the local VOICEVOX Engine",
+  );
   assert(!csp.includes("unsafe-inline"), "CSP should not require unsafe-inline");
   assert(index.headers.get("x-content-type-options") === "nosniff", "nosniff should be set");
   assert(index.headers.get("x-frame-options") === "DENY", "frame denial should be set");

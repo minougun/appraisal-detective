@@ -570,7 +570,7 @@ caseDefinitions: {
       initial: "田",
       portrait: "./assets/tanaka-client.generated.png",
       portraitClass: "portrait-tanaka",
-      tension: "相続で妹を説得したい兄。高め誘導は弱い声で始まり、報告時に強くなる。",
+      tension: "相続で妹を説得したい兄。依頼者の都合を聞きすぎると、評価額への要求が次第に強くなる。",
       gameplayLines: {
         field: "古い家なのは分かっています。でも、思い出まで減点されるんですか。",
         documents: "面積や名義の話、妹にどう説明すればいいんでしょう。",

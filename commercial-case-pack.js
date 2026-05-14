@@ -470,7 +470,7 @@
       title: "追加融資のための担保評価",
       body: "港北工業団地の旧工場を担保に、運転資金の追加融資を受けたいという依頼。社長は早期回答を求めている。",
       clientLine: "銀行提出用なので、担保余力が出るように<span class=\"pressure-word\">少し強め</span>に見られませんか。",
-      mentorLine: "担保は換金できて初めて意味がある。正常価格と処分リスクを混ぜるな。",
+      mentorLine: "担保は換金できて初めて意味がある。正常価格と処分リスクは、同じ判断に混ぜない。",
       issues: ["価格の種類: 正常価格と担保評価上の留意点", "対象不動産: 土地建物、残置設備、地中リスク", "依頼者圧力: 融資希望額への誘導", "確認軸: 土壌汚染、流動性、接道"],
       professionalTitle: "正常価格を軸に受任し、担保リスクを別枠で整理する",
       professionalDetail: "融資希望ではなく、処分可能性と市場参加者のリスクを根拠化する。",
@@ -540,7 +540,7 @@
     },
     rebuttal: { id: "soilAndLiquidity", label: "土壌未了と換金性で再反論", detail: "土壌調査未了を根拠に、担保余力だけを強く見られないと返す。", wrongLabel: "銀行の事情に合わせて表現を丸める", wrongDetail: "融資実行のため、担保余力の表現を曖昧にする。", lesson: "金融機関の都合は正常価格の根拠にならない。" },
     clientRebuttals: { defaultLine: "担保だから、多少強めでも銀行は分かってくれますよね。", rules: [{ evidence: "mortgageSoilReport", line: "土壌調査は後でやればいい話ではありませんか。" }, { evidence: "mortgageLiquidity", line: "売却期間は銀行内部の話で、評価額とは別では。" }] },
-    reportPressure: { client: "融資が止まると資金繰りが厳しいんです。担保余力をもう少し出せませんか。", mentor: "社長の資金繰りは聞け。ただし、正常価格と担保リスクは混ぜるな。" },
+    reportPressure: { client: "融資が止まると資金繰りが厳しいんです。担保余力をもう少し出せませんか。", mentor: "社長の資金繰りは聞いていい。ただし、正常価格と担保リスクは別に見よう。" },
     marketScenarios: [
       { id: "factoryOversupply", title: "旧工場地の売却期間が長期化", detail: "近隣で更地化済み物件も成約に時間を要している。", appraisalHint: "市場性と処分期間を支える根拠にする。", supportEvidence: ["mortgageLiquidity", "mortgageVacantYard"] },
       { id: "environmentWatch", title: "環境調査要求が厳格化", detail: "買主側が旧工場地に土壌概況調査を求める傾向。", appraisalHint: "土壌調査未了と地下埋設物を支える根拠にする。", supportEvidence: ["mortgageSoilReport", "mortgageOldTank"] },
@@ -1236,7 +1236,7 @@
       },
       rebuttal: narrative.rebuttal ?? { id: `${item.prefix}EvidenceReply`, label: `${item.docs[0]}で再反論`, detail: "依頼者の反論に、最初の重要資料を根拠として返す。", wrongLabel: "依頼者の事情を条件付きで採る", wrongDetail: "価格前提に依頼者説明を残す。", lesson: "依頼者事情は聞くが、評価額を支える根拠とは分ける。" },
       clientRebuttals: narrative.clientRebuttals ?? { defaultLine: "そこまで厳しく見ると、こちらの事情が反映されません。", rules: [{ evidence: docIds[0], line: `${item.docs[0]}は、そこまで価格に効くものですか。` }, { evidence: docIds[1], line: "それは一時的な問題として扱えませんか。" }] },
-      reportPressure: narrative.reportPressure ?? { client: `今回は${item.pressureWord}見せたいんです。表現だけでも調整できませんか。`, mentor: "表現は変えられる。根拠は変えるな。事実、分析、結論の順に返せ。" },
+      reportPressure: narrative.reportPressure ?? { client: `今回は${item.pressureWord}見せたいんです。表現だけでも調整できませんか。`, mentor: "表現は変えられる。根拠は変えない。事実、分析、結論の順に返そう。" },
       marketScenarios: narrative.marketScenarios ?? [
         { id: `${item.prefix}Risk`, title: `${item.adjustmentTerm}への警戒が上昇`, detail: "市場参加者が契約・運営・権利リスクを強く見る局面。", appraisalHint: "重要資料と現地リスクを支える根拠にする。", supportEvidence: [docIds[0], spotIds[0]] },
         { id: `${item.prefix}Demand`, title: "買主層が選別的に変化", detail: "表面利回りや見た目より、裏付け資料の精度が重視されている。", appraisalHint: "資料照合と検算結果を支える根拠にする。", supportEvidence: [docIds[1], docIds[2]] },

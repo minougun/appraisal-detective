@@ -10,7 +10,7 @@
     />
     <meta
       http-equiv="Content-Security-Policy"
-      content="default-src 'self'; script-src 'self'; style-src 'self'; img-src 'self'; font-src 'self'; media-src 'self'; connect-src 'self'; object-src 'none'; base-uri 'none'; form-action 'none'; frame-src 'none'; worker-src 'none'"
+      content="default-src 'self'; script-src 'self'; style-src 'self'; img-src 'self'; font-src 'self'; media-src 'self' blob:; connect-src 'self' http://127.0.0.1:50021 http://localhost:50021; object-src 'none'; base-uri 'none'; form-action 'none'; frame-src 'none'; worker-src 'none'"
     />
     <meta name="appraisal-low-stimulus-storage-key" content="appraisal-detective-low-stimulus" />
     <script src="./boot.js"></script>
@@ -47,6 +47,7 @@
           </span>
           <button class="audio-toggle" id="bgm-toggle" type="button" aria-pressed="true">BGM 待機中</button>
           <button class="audio-toggle" id="audio-toggle" type="button" aria-pressed="true">SE ON</button>
+          <button class="audio-toggle" id="voice-toggle" type="button" aria-pressed="true">VOICE 待機中</button>
         </div>
       </header>
 

@@ -52,6 +52,9 @@
       mechanicInputValue: "",
       mechanicInputPassed: null,
       intakeChoice: null,
+      intakeRiskChoice: null,
+      intakeNextCheckChoice: null,
+      intakeRebuttalChoice: null,
       mechanicChoice: null,
       comparableChoice: null,
       adjustmentChoice: null,
@@ -90,6 +93,9 @@
     state.mechanicInputValue = "";
     state.mechanicInputPassed = null;
     state.intakeChoice = null;
+    state.intakeRiskChoice = null;
+    state.intakeNextCheckChoice = null;
+    state.intakeRebuttalChoice = null;
     state.mechanicChoice = null;
     state.comparableChoice = null;
     state.adjustmentChoice = null;

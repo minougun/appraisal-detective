@@ -116,6 +116,160 @@ async function completeCase(page, caseId, mode = "normal") {
   }
 }
 
+async function installVoiceStub(page) {
+  await page.addInitScript(() => {
+    window.__APPRAISAL_DISABLE_VOICEVOX__ = true;
+    const calls = [];
+    class FakeSpeechSynthesisUtterance {
+      constructor(text) {
+        this.text = text;
+        this.lang = "";
+        this.pitch = 1;
+        this.rate = 1;
+        this.volume = 1;
+        this.voice = null;
+        this.onend = null;
+        this.onerror = null;
+      }
+    }
+    Object.defineProperty(window, "SpeechSynthesisUtterance", {
+      configurable: true,
+      value: FakeSpeechSynthesisUtterance,
+    });
+    Object.defineProperty(window, "speechSynthesis", {
+      configurable: true,
+      value: {
+      getVoices: () => [
+        { name: "Kyoko Japanese Female", lang: "ja-JP" },
+        { name: "Otoya Japanese Male", lang: "ja-JP" },
+      ],
+      speak: (utterance) => {
+        calls.push({
+          text: utterance.text,
+          pitch: utterance.pitch,
+          rate: utterance.rate,
+          volume: utterance.volume,
+          voice: utterance.voice?.name ?? "",
+        });
+        window.setTimeout(() => utterance.onend?.(), 0);
+      },
+      cancel: () => calls.push({ cancel: true }),
+      resume: () => {},
+      },
+    });
+    Object.defineProperty(window, "__voiceCalls", {
+      configurable: true,
+      value: calls,
+    });
+  });
+}
+
+async function installVoicevoxStub(page, { includePlayerSpeaker = true } = {}) {
+  await page.addInitScript(({ includePlayerSpeaker }) => {
+    const calls = [];
+    const originalFetch = window.fetch.bind(window);
+    const speakers = [
+      { name: "九州そら", speaker_uuid: "sora", styles: [{ id: 16, name: "ノーマル" }, { id: 17, name: "セクシー" }] },
+      { name: "No.7", speaker_uuid: "no7", styles: [{ id: 29, name: "ノーマル" }, { id: 30, name: "アナウンス" }, { id: 31, name: "読み聞かせ" }] },
+      includePlayerSpeaker ? { name: "雀松朱司", speaker_uuid: "akamatsu", styles: [{ id: 52, name: "ノーマル" }] } : null,
+      { name: "白上虎太郎", speaker_uuid: "kotaro", styles: [{ id: 12, name: "ノーマル" }, { id: 32, name: "わーい" }] },
+      { name: "春日部つむぎ", speaker_uuid: "kasukabe", styles: [{ id: 8, name: "ノーマル" }, { id: 81, name: "ささやき" }] },
+      { name: "青山龍星", speaker_uuid: "aoyama", styles: [{ id: 13, name: "ノーマル" }, { id: 130, name: "不機嫌" }, { id: 131, name: "囁き" }] },
+      { name: "玄野武宏", speaker_uuid: "kurono", styles: [{ id: 11, name: "ノーマル" }, { id: 111, name: "ツンギレ" }] },
+    ].filter(Boolean);
+    Object.defineProperty(window, "speechSynthesis", {
+      configurable: true,
+      value: undefined,
+    });
+    Object.defineProperty(window, "SpeechSynthesisUtterance", {
+      configurable: true,
+      value: undefined,
+    });
+    Object.defineProperty(URL, "createObjectURL", {
+      configurable: true,
+      value: (blob) => {
+        calls.push({ path: "blob", type: blob.type });
+        return `blob:voicevox-${calls.length}`;
+      },
+    });
+    Object.defineProperty(URL, "revokeObjectURL", {
+      configurable: true,
+      value: () => {},
+    });
+    class FakeAudio {
+      constructor(src = "") {
+        this.src = src;
+        this.volume = 1;
+        this.onended = null;
+        this.onerror = null;
+      }
+
+      play() {
+        calls.push({ path: "play", src: this.src, volume: this.volume, at: performance.now() });
+        window.setTimeout(() => this.onended?.(), 0);
+        return Promise.resolve();
+      }
+
+      pause() {
+        calls.push({ path: "pause", src: this.src });
+      }
+
+      removeAttribute(name) {
+        if (name === "src") this.src = "";
+      }
+    }
+    Object.defineProperty(window, "Audio", {
+      configurable: true,
+      value: FakeAudio,
+    });
+    window.fetch = (resource, options = {}) => {
+      const resourceUrl = resource instanceof URL ? resource.href : typeof resource === "string" ? resource : resource.url;
+      const url = new URL(resourceUrl, window.location.href);
+      if (url.pathname === "/voicevox/speakers") {
+        calls.push({ path: url.pathname });
+        return Promise.resolve(jsonResponse(speakers));
+      }
+      if (url.pathname === "/voicevox/audio_query") {
+        calls.push({
+          path: url.pathname,
+          speaker: url.searchParams.get("speaker"),
+          text: url.searchParams.get("text"),
+        });
+        return Promise.resolve(
+          jsonResponse({
+            speedScale: 1,
+            pitchScale: 0,
+            intonationScale: 1,
+            volumeScale: 1,
+            prePhonemeLength: 0.1,
+            postPhonemeLength: 0.1,
+            accent_phrases: [],
+          }),
+        );
+      }
+      if (url.pathname === "/voicevox/synthesis") {
+        calls.push({
+          path: url.pathname,
+          speaker: url.searchParams.get("speaker"),
+          query: JSON.parse(options.body),
+        });
+        return Promise.resolve(new Response("voicevox wav", { headers: { "Content-Type": "audio/wav" } }));
+      }
+      return originalFetch(resource, options);
+    };
+    Object.defineProperty(window, "__voicevoxCalls", {
+      configurable: true,
+      value: calls,
+    });
+
+    function jsonResponse(value) {
+      return new Response(JSON.stringify(value), {
+        headers: { "Content-Type": "application/json" },
+      });
+    }
+  }, { includePlayerSpeaker });
+}
+
 async function resultScore(page) {
   const text = await page.locator(".result-card").getByText(/総合スコア: \d+点/).textContent();
   return Number(text.match(/総合スコア: (\d+)点/)?.[1] ?? 0);
@@ -379,6 +533,9 @@ test("intake phase shows client and mentor portraits", async ({ page }) => {
 
   await expect(page.locator(".novel-scene")).toHaveCount(0);
   await expect(page.locator(".phase-game-intake")).toBeVisible();
+  await expect(page.locator(".detective-prompt")).toContainText("受ける前の線引き");
+  await page.locator("[data-intake=professional]").click();
+  await page.getByText("依頼メモを見る").click();
   await expect(page.locator(".speech.client .speaker-portrait")).toBeVisible();
   await expect(page.locator(".speech.mentor .speaker-portrait")).toBeVisible();
   await expect(page.getByText("黒川航")).toBeVisible();
@@ -388,7 +545,7 @@ test("intake phase shows client and mentor portraits", async ({ page }) => {
 test("novel scene advances the story before each phase action", async ({ page }) => {
   await page.goto("http://127.0.0.1:44561/", { waitUntil: "networkidle" });
 
-  await expect(page.locator(".novel-scene .novel-box")).toContainText("先輩鑑定士の横で事件ファイルを読む新人鑑定士");
+  await expect(page.locator(".novel-scene .novel-box")).toContainText("どの根拠が使えるか見る");
   await expect(page.locator("[data-novel-next]")).toHaveText("次へ");
   await expect(page.locator(".novel-character.player")).toBeVisible();
   await expect(page.locator(".novel-character.player .novel-character-label")).toHaveText("新人鑑定士");
@@ -411,7 +568,7 @@ test("novel scene advances the story before each phase action", async ({ page })
   await page.locator("[data-novel-next]").click();
   await expect(page.locator(".novel-scene .novel-box")).toContainText("相続で妹を説得したい兄");
   await page.locator("[data-novel-next]").click();
-  await expect(page.locator(".novel-scene .novel-box")).toContainText("依頼者の事情は聞く");
+  await expect(page.locator(".novel-scene .novel-box")).toContainText("評価額に入れる根拠は分ける");
   await expect(page.locator(".novel-character.player")).toHaveClass(/active/);
   await page.locator("[data-novel-skip]").click();
   await expect(page.locator("[data-novel-next]")).toHaveText("受任判断へ");
@@ -468,36 +625,73 @@ test("case files expose easy normal hard progression", async ({ page }) => {
   await expect(page.locator('[data-case-file="case003"] .file-difficulty')).toHaveText("ハード");
 });
 
-test("case001 and case002 show tutorial guidance while case003 stays hard", async ({ page }) => {
+test("intake starts with a contradiction pick before the appraisal decision", async ({ page }) => {
+  await page.goto("http://127.0.0.1:44561/", { waitUntil: "networkidle" });
+  await startCase(page, "case001", "normal", { resolveIntakeIntro: false });
+
+  await expect(page.locator(".detective-prompt")).toContainText("価格に入れてはいけないものを選べ");
+  await expect(page.locator(".brief-grid")).toHaveCount(0);
+  await expect(page.locator(".detective-prompt")).toContainText("低い額だと困る、という依頼者の希望");
+  await expect(page.locator(".detective-prompt")).toContainText("妹に見せる、という利用目的");
+  await expect(page.locator(".detective-prompt")).toContainText("相続協議に使う、という依頼目的");
+  await page.getByRole("button", { name: "低い額だと困る、という依頼者の希望" }).click();
+  await expect(page.locator("#mentor-log")).toContainText("田中さんの困りごとで価格は動かさない");
+  await expect(page.locator(".detective-prompt")).toContainText("次に開く資料は？");
+  await page.getByRole("button", { name: "取引事例の日付" }).click();
+  await expect(page.locator("#mentor-log")).toContainText("これが価格時点だ");
+  await expect(page.locator(".detective-prompt")).toContainText("返すカードを選べ");
+  await expect(page.locator(".detective-prompt")).toContainText("事例の日付が評価時点とずれている");
+  await page.getByRole("button", { name: "取引事例の日付" }).click();
+  await expect(page.locator("#mentor-log")).toContainText("資料に戻した、それでいい");
+  await expect(page.getByText("時点の違う価格は混ぜられません")).toBeVisible();
+  await expect(page.getByText("日付が違うだけでも、そこまで見ますか")).toBeVisible();
+  await expect(page.locator(".brief-grid")).toHaveCount(0);
+  await expect(page.locator(".detective-prompt")).toContainText("受ける前の線引き");
+  await page.locator("[data-intake=professional]").click();
+  await expect(page.locator(".brief-grid")).toBeVisible();
+  await expect(page.locator(".brief-grid")).toContainText("今回の線引き");
+  await expect(page.locator(".brief-grid")).toContainText("依頼メモを見る");
+  await expect(page.locator(".brief-grid")).toContainText("引っかかり");
+  await expect(page.locator(".brief-grid")).not.toContainText("鑑定評価上の初期論点");
+  await expect(page.locator("#next-phase")).toBeEnabled();
+});
+
+test("early guidance is moved into optional mentor advice", async ({ page }) => {
   await page.goto("http://127.0.0.1:44561/", { waitUntil: "networkidle" });
   await startCase(page, "case001", "normal");
-  await expect(page.locator(".tutorial-card")).toContainText("まず覚えること");
-  await expect(page.locator(".tutorial-card")).toContainText("正常価格");
+  await expect(page.locator(".tutorial-card")).toHaveCount(0);
+  await page.getByRole("button", { name: "先輩の一言" }).click();
+  await expect(page.locator("#mentor-log")).toHaveText("田中さんの希望額は、まだ材料じゃない。先に事例の日付をそろえよう。");
 
   await page.goto("http://127.0.0.1:44561/", { waitUntil: "networkidle" });
   await startCase(page, "case002", "normal");
-  await expect(page.locator(".tutorial-card")).toContainText("収益物件の入口");
-  await expect(page.locator(".tutorial-card")).toContainText("純収益");
+  await expect(page.locator(".tutorial-card")).toHaveCount(0);
+  await page.getByRole("button", { name: "先輩の一言" }).click();
+  await expect(page.locator("#mentor-log")).toHaveText("利回りの希望は後だ。先に収入と費用の内訳を見よう。");
 
   await page.goto("http://127.0.0.1:44561/", { waitUntil: "networkidle" });
   await startCase(page, "case003", "normal");
   await expect(page.locator(".tutorial-card")).toHaveCount(0);
+  await page.getByRole("button", { name: "先輩の一言" }).click();
+  await expect(page.locator("#mentor-log")).toHaveText("最大容積案はまだ置いておく。先に道路とのつながりだ。");
 });
 
-test("tutorial guidance follows early phase progression", async ({ page }) => {
+test("mentor advice follows early phase progression", async ({ page }) => {
   await page.goto("http://127.0.0.1:44561/", { waitUntil: "networkidle" });
   await startCase(page, "case001", "normal");
   await page.locator("[data-intake=professional]").click();
   await advancePhase(page, "現地調査へ");
-  await expect(page.locator(".tutorial-card")).toContainText("現地調査の見方");
-  await expect(page.locator(".tutorial-card")).toContainText("価格に結びつけやすい");
+  await expect(page.locator(".tutorial-card")).toHaveCount(0);
+  await page.getByRole("button", { name: "先輩の一言" }).click();
+  await expect(page.locator("#mentor-log")).toHaveText("見た目の傷で止まらない。価格に効く条件差を見よう。");
 
   await page.locator("[data-hotspot=wallCrack]").click();
   await page.locator("[data-hotspot=boundary]").click();
   await page.locator("[data-hotspot=tower]").click();
   await advancePhase(page, "資料照合へ");
-  await expect(page.locator(".tutorial-card")).toContainText("資料照合の見方");
-  await expect(page.locator(".tutorial-card")).toContainText("事情補正");
+  await expect(page.locator(".tutorial-card")).toHaveCount(0);
+  await page.getByRole("button", { name: "先輩の一言" }).click();
+  await expect(page.locator("#mentor-log")).toHaveText("説明は材料の一つだ。数字と資料が食い違う場所を見よう。");
 });
 
 test("case file selection centers the chosen file before opening", async ({ page }) => {
@@ -908,17 +1102,13 @@ test("case data text is escaped when rendered through game templates", async ({ 
 
   await expect(page.getByText("<img src=x onerror=alert(1)>田中修一", { exact: false })).toBeVisible();
   await startCase(page, "case001", "normal");
-  await expect(page.locator(".tutorial-card h3")).toContainText("<img src=x onerror=alert(4)>まず覚えること");
-  await expect(page.locator(".tutorial-card p").first()).toContainText(
-    "<script>alert(5)</script>鑑定士は依頼者の事情を聞いたうえで、説明できる価格の幅を判断する。",
-  );
-  await expect(page.locator(".tutorial-terms")).toContainText("<img src=x onerror=alert(6)>価格時点: いつの価格か");
-  await expect(page.locator(".tutorial-next")).toContainText(
-    "<svg onload=alert(7)>この面談では正常価格として受任を選ぶ。",
-  );
-  await expect(page.locator(".tutorial-card img")).toHaveCount(0);
-  await expect(page.locator(".tutorial-card script")).toHaveCount(0);
-  await expect(page.locator(".tutorial-card svg")).toHaveCount(0);
+  await expect(page.locator(".tutorial-card")).toHaveCount(0);
+  await page.getByRole("button", { name: "先輩の一言" }).click();
+  await expect(page.locator("#mentor-log")).toContainText("事例の日付をそろえよう");
+  await expect(page.locator("#mentor-log")).not.toContainText("<script>alert(5)</script>");
+  await expect(page.locator("#mentor-log img")).toHaveCount(0);
+  await expect(page.locator("#mentor-log script")).toHaveCount(0);
+  await expect(page.locator("#mentor-log svg")).toHaveCount(0);
   expect(dialogs).toEqual([]);
 });
 
@@ -944,6 +1134,9 @@ test("pressure line sanitizer only allows the pressure-word span", async ({ page
 
   await page.goto("http://127.0.0.1:44561/", { waitUntil: "networkidle" });
   await startCase(page, "case001", "normal");
+  await expect(page.locator(".detective-prompt")).toContainText("受ける前の線引き");
+  await page.locator("[data-intake=professional]").click();
+  await page.getByText("依頼メモを見る").click();
 
   await expect(page.getByText("<img src=x onerror=alert(8)>父の遺した家です。", { exact: false })).toBeVisible();
   await expect(page.getByText("<span onclick=\"alert(9)\" class=\"pressure-word\">危険", { exact: false })).toBeVisible();
@@ -1024,6 +1217,13 @@ test("field hotspots meet 44px target and gameplay cast stays in the game screen
   const box = await page.locator("[data-hotspot=wallCrack]").boundingBox();
   expect(box.width).toBeGreaterThanOrEqual(44);
   expect(box.height).toBeGreaterThanOrEqual(44);
+  await page.locator("[data-hotspot=wallCrack]").hover();
+  await expect(page.locator("[data-hotspot=wallCrack] .hotspot-evidence-preview")).toBeVisible();
+  await expect(page.locator("[data-hotspot=wallCrack] .hotspot-evidence-preview")).toContainText("外壁劣化");
+  await expect(page.locator("[data-hotspot=wallCrack] .hotspot-evidence-preview")).toContainText("個別的要因");
+  await page.locator("[data-hotspot=boundary]").focus();
+  await expect(page.locator("[data-hotspot=boundary] .hotspot-evidence-preview")).toBeVisible();
+  await expect(page.locator("[data-hotspot=boundary]")).toHaveAttribute("aria-label", /証拠カード/);
   await expect(page.locator(".gameplay-cast")).toBeVisible();
   await expect(page.locator(".gameplay-cast")).toContainText("新人鑑定士");
   await expect(page.locator(".gameplay-cast")).toContainText("先輩鑑定士");
@@ -1196,8 +1396,11 @@ test("market scenario changes the case briefing between replays", async ({ page 
   });
   await page.goto("http://127.0.0.1:44561/", { waitUntil: "networkidle" });
   await startCase(page, "case003", "normal");
+  await expect(page.locator(".detective-prompt")).toContainText("受ける前の線引き");
+  await page.locator("[data-intake=professional]").click();
+  await page.getByText("依頼メモを見る").click();
 
-  const marketBrief = page.locator(".brief-card.urgent");
+  const marketBrief = page.locator(".brief-grid");
   await expect(marketBrief.getByText("今回の市場条件")).toBeVisible();
   await expect(marketBrief.getByText("高度地区運用が厳格化")).toBeVisible();
   await expect(marketBrief.getByText("用途地域マップと道路後退を支える根拠にする")).toBeVisible();
@@ -1216,8 +1419,11 @@ test("third market scenario appears on the third run of the same case", async ({
   });
   await page.goto("http://127.0.0.1:44561/", { waitUntil: "networkidle" });
   await startCase(page, "case003", "normal");
+  await expect(page.locator(".detective-prompt")).toContainText("受ける前の線引き");
+  await page.locator("[data-intake=professional]").click();
+  await page.getByText("依頼メモを見る").click();
 
-  const marketBrief = page.locator(".brief-card.urgent");
+  const marketBrief = page.locator(".brief-grid");
   await expect(marketBrief.getByText("浸水対策費が事業収支を圧迫")).toBeVisible();
   await expect(marketBrief.getByText("浸水履歴とインフラ負担を支える根拠にする")).toBeVisible();
 });
@@ -1757,6 +1963,200 @@ test("BGM toggle persists and low stimulus suppresses playback state", async ({ 
   await page.locator("#stimulus-toggle").click();
   await expect(page.locator("#bgm-toggle")).toHaveText("BGM 低刺激で停止");
   await expect(page.locator("#bgm-toggle")).toHaveAttribute("aria-label", "BGMはオンですが、低刺激モードにより停止中です");
+});
+
+test("VOICE toggle persists and reads dialogue with character voice profiles", async ({ page }) => {
+  await installVoiceStub(page);
+  await page.goto("http://127.0.0.1:44561/", { waitUntil: "networkidle" });
+  await expect(page.locator("#voice-toggle")).toHaveText("VOICE 待機中");
+
+  await page.getByRole("heading", { name: "鑑定DE探偵" }).click();
+  await expect.poll(() => page.evaluate(() => window.__voiceCalls.filter((call) => call.text).length)).toBeGreaterThan(0);
+  const firstLine = await page.evaluate(() => window.__voiceCalls.find((call) => call.text));
+  expect(firstLine.text).toContain("依頼ファイルを開く");
+  expect(firstLine.pitch).toBeLessThanOrEqual(1);
+  expect(firstLine.rate).toBeLessThanOrEqual(1);
+  expect(firstLine.voice).toContain("Otoya");
+  await expect(page.locator("#voice-toggle")).toContainText(/VOICE (代替音声|有効)/);
+
+  await page.locator("[data-novel-next]").click();
+  await expect.poll(() =>
+    page.evaluate(() => window.__voiceCalls.some((call) => call.text?.includes("数字の裏には、人の都合"))),
+  ).toBe(true);
+  const mentorLine = await page.evaluate(() =>
+    window.__voiceCalls.find((call) => call.text?.includes("数字の裏には、人の都合")),
+  );
+  expect(mentorLine.text).toContain("数字の裏には、人の都合");
+  expect(mentorLine.pitch).toBeLessThan(0.95);
+  expect(mentorLine.voice).toContain("Otoya");
+  await expect.poll(() =>
+    page.evaluate(() => window.__voiceCalls.some((call) => call.text?.includes("希望ではなく根拠に戻ろう"))),
+  ).toBe(true);
+  const mentorParts = await page.evaluate(() => window.__voiceCalls.filter((call) => call.text?.includes("希望ではなく根拠に戻ろう")));
+  expect(mentorParts.length).toBeGreaterThan(0);
+  expect(mentorParts[0].rate).toBeLessThanOrEqual(1);
+
+  await page.locator("#voice-toggle").click();
+  await expect(page.locator("#voice-toggle")).toHaveText("VOICE 停止中");
+  await expect(page.locator("#voice-toggle")).toHaveAttribute("aria-pressed", "false");
+  await page.reload({ waitUntil: "networkidle" });
+  await expect(page.locator("#voice-toggle")).toHaveText("VOICE 停止中");
+  await expect(page.locator("#voice-toggle")).toHaveAttribute("aria-pressed", "false");
+});
+
+test("VOICE prefers local VOICEVOX Engine audio through the production proxy", async ({ page }) => {
+  await installVoicevoxStub(page);
+  await page.goto("http://127.0.0.1:44561/", { waitUntil: "networkidle" });
+
+  const clickAt = await page.evaluate(() => performance.now());
+  await page.getByRole("heading", { name: "鑑定DE探偵" }).click();
+  await expect.poll(() => page.evaluate(() => window.__voicevoxCalls.some((call) => call.path === "/voicevox/synthesis"))).toBe(true);
+  await expect.poll(() =>
+    page.evaluate(() =>
+      window.__voicevoxCalls.some((call) => call.path === "/voicevox/audio_query" && call.text?.includes("依頼ファイルを開く")),
+    ),
+  ).toBe(true);
+  const playerQuery = await page.evaluate(() =>
+    window.__voicevoxCalls.find((call) => call.path === "/voicevox/audio_query" && call.text?.includes("依頼ファイルを開く")),
+  );
+  expect(playerQuery.speaker).toBe("52");
+  await expect.poll(() =>
+    page.evaluate(() => Boolean(window.__voicevoxCalls.find((call) => call.path === "/voicevox/synthesis" && call.speaker === "52"))),
+  ).toBe(true);
+  const playerSynthesis = await page.evaluate(() =>
+    window.__voicevoxCalls.find((call) => call.path === "/voicevox/synthesis" && call.speaker === "52"),
+  );
+  expect(playerSynthesis.query.speedScale).toBeLessThanOrEqual(1.03);
+  expect(playerSynthesis.query.pitchScale).toBeLessThan(0);
+  expect(playerSynthesis.query.intonationScale).toBeGreaterThan(1);
+  expect(playerSynthesis.query.intonationScale).toBeLessThan(1.25);
+  await expect(page.locator("#voice-toggle")).toContainText(/VOICE VOICEVOX/);
+  await expect.poll(() => page.evaluate(() => window.__voicevoxCalls.find((call) => call.path === "play" && call.src?.startsWith("blob:voicevox-"))?.at)).toBeGreaterThan(0);
+  const firstPlayAt = await page.evaluate(() => window.__voicevoxCalls.find((call) => call.path === "play" && call.src?.startsWith("blob:voicevox-")).at);
+  expect(firstPlayAt - clickAt).toBeGreaterThan(350);
+  expect(firstPlayAt - clickAt).toBeLessThan(1000);
+  const playerDebug = await page.evaluate(() =>
+    window.APPRAISAL_AUDIO.voiceDebugLog.find((entry) => entry.backend === "voicevox" && entry.castId === "player"),
+  );
+  expect(playerDebug.speakerName).toBe("雀松朱司");
+  expect(playerDebug.styleName).toBe("ノーマル");
+  expect(playerDebug.styleName).not.toMatch(/ささやき|ヒソヒソ|囁き|内緒話/);
+  const narratorPlan = await page.evaluate(() =>
+    window.APPRAISAL_AUDIO.buildUtterancePlan({
+      kind: "narrator",
+      text: "第一章 / 依頼ファイル",
+    }),
+  );
+  expect(narratorPlan.fallbackProfile.pitch).toBeLessThan(playerDebug.profile.pitch);
+  expect(narratorPlan.fallbackProfile.rate).toBeCloseTo(1.25, 2);
+  const longNarratorPlan = await page.evaluate(() =>
+    window.APPRAISAL_AUDIO.buildUtterancePlan({
+      kind: "narrator",
+      text: "相続協議の依頼。田中は、低い評価額を避けたがっている。比較できる資料で線引きをして、希望額と評価根拠を分ける。",
+    }),
+  );
+  expect(longNarratorPlan.fallbackProfile.rate).toBeCloseTo(1.05, 2);
+  const narratorStyle = await page.evaluate(async () =>
+    window.APPRAISAL_AUDIO.resolveVoicevoxStyle({ castId: "narrator", emotion: "scene_set" }),
+  );
+  expect(narratorStyle.speakerName).toBe("九州そら");
+  expect(narratorStyle.name).toBe("ノーマル");
+  expect(narratorStyle.speakerName).not.toBe(playerDebug.speakerName);
+  await page.evaluate(() =>
+    window.APPRAISAL_AUDIO.speakLines([{ kind: "narrator", text: "第一章 / 依頼ファイル" }], {
+      key: "test-narrator-speed",
+    }),
+  );
+  await expect.poll(() =>
+    page.evaluate(() =>
+      Boolean(
+        window.APPRAISAL_AUDIO.voiceDebugLog.find(
+          (entry) => entry.backend === "voicevox" && entry.castId === "narrator" && entry.phraseText.includes("第一章"),
+        ),
+      ),
+    ),
+  ).toBe(true);
+  const narratorDebug = await page.evaluate(() =>
+    window.APPRAISAL_AUDIO.voiceDebugLog.find(
+      (entry) => entry.backend === "voicevox" && entry.castId === "narrator" && entry.phraseText.includes("第一章"),
+    ),
+  );
+  expect(narratorDebug.profile.rate).toBeCloseTo(1.25, 2);
+  const narratorSynthesis = await page.evaluate(() =>
+    window.__voicevoxCalls.find((call) => call.path === "/voicevox/synthesis" && call.speaker === "16" && call.query?.speedScale === 1.25),
+  );
+  expect(narratorSynthesis.query.speedScale).toBeCloseTo(1.25, 2);
+  const tanakaPlan = await page.evaluate(() =>
+    window.APPRAISAL_AUDIO.buildUtterancePlan({
+      kind: "client",
+      portraitClass: "portrait-tanaka",
+      text: "本当にその評価額になるんですか。",
+    }),
+  );
+  expect(tanakaPlan.castId).toBe("elderlyClient");
+  expect(tanakaPlan.fallbackProfile.pitch).toBeGreaterThan(0.85);
+  expect(tanakaPlan.fallbackProfile.rate).toBeLessThanOrEqual(1);
+  const tanakaStyle = await page.evaluate(async () => {
+    const plan = window.APPRAISAL_AUDIO.buildUtterancePlan({
+      kind: "client",
+      portraitClass: "portrait-tanaka",
+      text: "本当にその評価額になるんですか。",
+    });
+    return window.APPRAISAL_AUDIO.resolveVoicevoxStyle({ castId: plan.castId, emotion: plan.emotion });
+  });
+  expect(tanakaStyle.speakerName).toBe("玄野武宏");
+  expect(tanakaStyle.name).toBe("ノーマル");
+
+  await page.locator("[data-novel-next]").click();
+  await expect.poll(() =>
+    page.evaluate(() =>
+      window.__voicevoxCalls.some(
+        (call) => call.path === "/voicevox/audio_query" && call.speaker === "13" && call.text?.includes("数字の裏には、人の都合"),
+      ),
+    ),
+  ).toBe(true);
+  await expect.poll(() =>
+    page.evaluate(() =>
+      Boolean(
+        window.APPRAISAL_AUDIO.voiceDebugLog.find(
+          (entry) => entry.backend === "voicevox" && entry.castId === "mentor" && entry.phraseText.includes("根拠"),
+        ),
+      ),
+    ),
+  ).toBe(true);
+  const mentorDebug = await page.evaluate(() =>
+    window.APPRAISAL_AUDIO.voiceDebugLog.find((entry) => entry.backend === "voicevox" && entry.castId === "mentor" && entry.phraseText.includes("根拠")),
+  );
+  expect(mentorDebug.speakerName).toBe("青山龍星");
+  expect(mentorDebug.styleName).toBe("ノーマル");
+  expect(mentorDebug.styleName).not.toMatch(/ささやき|ヒソヒソ|囁き|内緒話|不機嫌|ツンギレ|おこ|熱血/);
+  expect(mentorDebug.emotion).toBe("stern_correction");
+  expect(mentorDebug.phraseCount).toBeLessThanOrEqual(2);
+  expect(mentorDebug.spokenText).toContain("数字の裏には");
+  expect(mentorDebug.profile.rate).toBeLessThanOrEqual(1);
+  const sternPlan = await page.evaluate(() =>
+    window.APPRAISAL_AUDIO.buildUtterancePlan({
+      kind: "mentor",
+      text: "数字の裏に人の都合がある。だが、鑑定評価は同情ではなく根拠で切り分けろ。",
+    }),
+  );
+  expect(sternPlan.phraseCount).toBe(2);
+  expect(sternPlan.spokenText).toContain("……だが");
+  expect(sternPlan.spokenText).toContain("根拠で分ける");
+  expect(sternPlan.spokenText).toContain("希望では分けない");
+  expect(sternPlan.spokenText).not.toContain("切り分けろ");
+});
+
+test("VOICE does not fall back to the light player VOICEVOX speaker when Akamatsu is missing", async ({ page }) => {
+  await installVoicevoxStub(page, { includePlayerSpeaker: false });
+  await page.goto("http://127.0.0.1:44561/", { waitUntil: "networkidle" });
+
+  await page.getByRole("heading", { name: "鑑定DE探偵" }).click();
+  await expect.poll(() => page.evaluate(() => window.__voicevoxCalls.some((call) => call.path === "/voicevox/speakers"))).toBe(true);
+  await expect.poll(() => page.evaluate(() => window.APPRAISAL_AUDIO.voiceStatusLabel())).toBe("代替音声");
+  const voicevoxQueries = await page.evaluate(() => window.__voicevoxCalls.filter((call) => call.path === "/voicevox/audio_query"));
+  expect(voicevoxQueries.some((call) => call.text?.includes("依頼ファイルを開く"))).toBe(false);
+  expect(voicevoxQueries.some((call) => call.speaker === "12")).toBe(false);
 });
 
 test("settings panel uses the same readable status vocabulary as the top bar", async ({ page }) => {

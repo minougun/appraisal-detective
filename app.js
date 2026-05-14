@@ -57,12 +57,18 @@ const audio = window.APPRAISAL_AUDIO;
 const {
   renderBgmToggle,
   renderAudioToggle,
+  renderVoiceToggle,
   renderStimulusToggle,
   bgmStatusLabel,
   seStatusLabel,
+  voiceStatusLabel,
   stimulusStatusLabel,
   updateBgmPlayback,
   primeBgmPlayback,
+  primeVoicePlayback,
+  speakLines,
+  prewarmVoiceLines,
+  cancelVoice,
   playClick,
   playEvidence,
   playPressure,
@@ -70,6 +76,7 @@ const {
   playCaseSelect,
   toggleBgm,
   toggleAudio,
+  toggleVoice,
   setBgmSceneOverride,
 } = audio;
 const state = createInitialState(caseDefinitions);
@@ -86,6 +93,7 @@ const view = document.querySelector("#phase-view");
 const mentorLog = document.querySelector("#mentor-log");
 const audioToggle = document.querySelector("#audio-toggle");
 const bgmToggle = document.querySelector("#bgm-toggle");
+const voiceToggle = document.querySelector("#voice-toggle");
 const stimulusToggle = document.querySelector("#stimulus-toggle");
 const srAnnouncer = document.querySelector("#sr-announcer");
 const srAlert = document.querySelector("#sr-alert");
@@ -109,6 +117,7 @@ let pressureFeedbackTimer;
 let evidenceFeedbackTimer;
 let mentorFeedbackTimer;
 let phaseCutInTimer;
+let mentorVoicePendingUntil = 0;
 
 window.APPRAISAL_RUNTIME = {
   getPhase: () => state.phase,
@@ -195,6 +204,29 @@ function speakerMarkup(kind, speaker, line, { pressure = false } = {}) {
   `;
 }
 
+function voiceLine(kind, speaker, text, options = {}) {
+  return {
+    kind,
+    name:
+      kind === "client"
+        ? speaker?.name
+        : kind === "player"
+        ? speaker?.name ?? "新人鑑定士"
+        : kind === "narrator"
+        ? speaker?.name ?? "語り"
+        : "先輩鑑定士",
+    portraitClass: kind === "client" ? speaker?.portraitClass : "",
+    lineId: options.lineId ?? `${kind}:${speaker?.portraitClass ?? "fixed"}:${String(text).slice(0, 24)}`,
+    emotion: options.emotion,
+    text,
+  };
+}
+
+function speakMentorLine(message) {
+  mentorVoicePendingUntil = Date.now() + 400;
+  speakLines([voiceLine("mentor", {}, message)], { key: `mentor:${message}` });
+}
+
 function bindImageFallbacks(root = view) {
   root.querySelectorAll("img[data-fallback-src]").forEach((image) => {
     image.addEventListener(
@@ -244,6 +276,7 @@ function addEvidence(id, note) {
 
 function mentor(message) {
   mentorLog.textContent = message;
+  speakMentorLine(message);
   mentorLog.classList.remove("updated");
   void mentorLog.offsetWidth;
   mentorLog.classList.add("updated");
@@ -485,6 +518,7 @@ function renderShell() {
   document.body.classList.toggle("operation-mode", state.phase >= 0);
   renderBgmToggle();
   renderAudioToggle();
+  renderVoiceToggle();
   renderStimulusToggle();
   document.querySelectorAll(".phase-progress span").forEach((step) => {
     step.classList.toggle("active", state.phase >= 0 && Number(step.dataset.step) <= state.phase);
@@ -529,22 +563,337 @@ function phaseObjective() {
 }
 
 function tutorialMarkup() {
-  const tutorial = currentCase().tutorials?.[state.phase];
-  if (!tutorial) return "";
-  const difficulty = currentCase().difficulty;
+  return "";
+}
+
+function mentorAdviceButtonMarkup() {
+  if (state.phase < 0) return "";
   return `
-    <article class="tutorial-card tutorial-${classToken(difficulty?.code?.toLowerCase(), "normal")}">
-      <div class="tutorial-head">
-        <span class="term-chip">${htmlText(difficulty?.label ?? "ガイド")}</span>
-        <h3>${htmlText(tutorial.title)}</h3>
+    <button class="ghost-button mentor-advice-button" type="button" data-mentor-advice aria-label="先輩の一言">
+      <span>先輩の一言</span>
+      <small aria-hidden="true">次に見る点だけ聞く</small>
+    </button>
+  `;
+}
+
+function mentorAdviceMessage() {
+  const phaseAdvice = {
+    case001: {
+      0: "田中さんの希望額は、まだ材料じゃない。先に事例の日付をそろえよう。",
+      1: "見た目の傷で止まらない。価格に効く条件差を見よう。",
+      2: "説明は材料の一つだ。数字と資料が食い違う場所を見よう。",
+    },
+    case002: {
+      0: "利回りの希望は後だ。先に収入と費用の内訳を見よう。",
+      1: "満室の印象だけでは弱い。空室と修繕のリスクまで見よう。",
+      2: "説明は材料の一つだ。数字と資料が食い違う場所を見よう。",
+    },
+    case003: {
+      0: "最大容積案はまだ置いておく。先に道路とのつながりだ。",
+      1: "開発案の前に、現地で計画が止まる理由を見よう。",
+      2: "説明は材料の一つだ。数字と資料が食い違う場所を見よう。",
+    },
+  };
+  const caseAdvice = phaseAdvice[state.caseId]?.[state.phase];
+  if (caseAdvice) return caseAdvice;
+  if (state.phase === 3) {
+    return "数字を動かす前に、支える根拠を二枚そろえよう。";
+  }
+  if (state.phase === 4) {
+    return "言い返すより、根拠カードで返そう。";
+  }
+  return "事情は聞く。価格根拠とは分けておこう。";
+}
+
+function bindMentorAdviceButton() {
+  view.querySelector("[data-mentor-advice]")?.addEventListener("click", () => {
+    mentor(mentorAdviceMessage());
+  });
+}
+
+function intakeRiskCheck() {
+  const checks = {
+    case001: {
+      line: "妹に見せる額としては、低い額だと困るんです。",
+      question: "価格に入れてはいけないものを選べ。",
+      options: [
+        {
+          id: "price_induction",
+          label: "低い額だと困る、という依頼者の希望",
+          correct: true,
+          feedback: "ここだ。目的は聞いていい。だが、田中さんの困りごとで価格は動かさない。",
+        },
+        {
+          id: "purpose_danger",
+          label: "妹に見せる、という利用目的",
+          correct: false,
+          feedback: "そこは確認していい情報だ。危ないのは、価格を動かそうとしている希望のほうだ。",
+        },
+        {
+          id: "family_ok",
+          label: "相続協議に使う、という依頼目的",
+          correct: false,
+          feedback: "相続協議の目的はメモする。田中さんの困りごとでは価格を動かさない。",
+        },
+      ],
+    },
+    case002: {
+      line: "銀行に出すだけです。還元利回りは低めに見ていただけると助かります。",
+      question: "危ない言葉を選べ。",
+      options: [
+        {
+          id: "yield_induction",
+          label: "低めに",
+          correct: true,
+          feedback: "ここだ。利回りを下げると、同じ収益でも価格は高く見える。希望からは決めない。先に収益の中身を見る。",
+        },
+        {
+          id: "loan_purpose_danger",
+          label: "還元利回り",
+          correct: false,
+          feedback: "利回りは見る。危ないのは、そこに依頼者の希望を混ぜる言葉だ。",
+        },
+        {
+          id: "full_occupancy_ok",
+          label: "銀行に出すだけ",
+          correct: false,
+          feedback: "提出先は確認する。ただ、それだけで利回りは動かせない。",
+        },
+      ],
+    },
+    case003: {
+      line: "市も前向きです。最大容積のマンション用地として見てください。",
+      question: "危ない前提を選べ。",
+      options: [
+        {
+          id: "hbu_induction",
+          label: "最大容積まで使える前提",
+          correct: true,
+          feedback: "ここだ。最大容積は検討する。ただ、使えるかを確認する前に結論へ置かない。",
+        },
+        {
+          id: "redevelopment_purpose_danger",
+          label: "マンション用地として検討すること",
+          correct: false,
+          feedback: "マンション用地の仮説は捨てなくていい。使える条件を見てからだ。",
+        },
+        {
+          id: "developer_ok",
+          label: "市が前向きという感触",
+          correct: false,
+          feedback: "行政の感触はメモでいい。評価は、使える条件で組む。",
+        },
+      ],
+    },
+  };
+  return checks[state.caseId] ?? checks.case001;
+}
+
+function intakeRiskMarkup() {
+  const check = intakeRiskCheck();
+  return `
+    <article class="brief-card urgent detective-prompt">
+      <span class="term-chip">最初の違和感</span>
+      <p class="client-quote">「${htmlText(check.line)}」</p>
+      <h3>${htmlText(check.question)}</h3>
+      <div class="option-grid compact-options">
+        ${check.options
+          .map(
+            (option) => `
+              <button class="option-button ${state.intakeRiskChoice === option.id ? "selected" : ""}" type="button" data-intake-risk="${htmlAttr(option.id)}">
+                <strong>${htmlText(option.label)}</strong>
+              </button>
+            `,
+          )
+          .join("")}
       </div>
-      <p>${htmlText(tutorial.body)}</p>
-      <div class="tutorial-terms" aria-label="用語ミニ解説">
-        ${(tutorial.terms ?? []).map((term) => `<span>${htmlText(term)}</span>`).join("")}
-      </div>
-      <div class="tutorial-next">次の一手: ${htmlText(tutorial.next)}</div>
     </article>
   `;
+}
+
+function bindIntakeRiskCheck() {
+  const check = intakeRiskCheck();
+  view.querySelectorAll("[data-intake-risk]").forEach((button) => {
+    button.addEventListener("click", () => {
+      state.intakeRiskChoice = button.dataset.intakeRisk;
+      const selected = check.options.find((option) => option.id === state.intakeRiskChoice);
+      renderPhase();
+      mentor(selected?.feedback ?? "違和感を一つに絞ろう。依頼者の希望と評価根拠を分ける。");
+      focusRevealedPhaseContent();
+    });
+  });
+}
+
+function intakeNextCheck() {
+  const checks = {
+    case001: {
+      question: "次に開く資料は？",
+      options: [
+        { id: "transaction_dates", label: "取引事例の日付", correct: true, feedback: "その資料だ。価格を比べるには、まず日付をそろえる。これが価格時点だ。" },
+        { id: "tanaka_target", label: "田中の希望額メモ", correct: false, feedback: "希望額は後だ。先に市場で比べられる資料を開こう。" },
+        { id: "sister_consent", label: "妹への説明メモ", correct: false, feedback: "説明メモは目的だ。価格を支える根拠ではない。" },
+      ],
+    },
+    case002: {
+      question: "次に開く資料は？",
+      options: [
+        { id: "income_expense", label: "収入と費用の内訳", correct: true, feedback: "その資料だ。先にNOIを見る。利回りを下げる前に、収益の中身を固めよう。" },
+        { id: "loan_amount", label: "希望融資額", correct: false, feedback: "融資額は目的だ。収益価格の根拠にはしない。" },
+        { id: "owner_yield", label: "依頼者が出した利回り表", correct: false, feedback: "提示利回りは未信頼情報だ。収益の中身から検証しよう。" },
+      ],
+    },
+    case003: {
+      question: "次に確認する現地条件は？",
+      options: [
+        { id: "road_connection", label: "前面道路とのつながり", correct: true, feedback: "そこからだ。計画が成り立つかは、接道で決まる。" },
+        { id: "maximum_volume", label: "最大容積を使った事業計画", correct: false, feedback: "事業計画は後だ。まず合法性と物理的可能性を潰そう。" },
+        { id: "city_mood", label: "市の前向きな反応", correct: false, feedback: "空気では評価できない。規制と権利関係を見よう。" },
+      ],
+    },
+  };
+  return checks[state.caseId] ?? checks.case001;
+}
+
+function intakeNextMarkup() {
+  const check = intakeNextCheck();
+  return `
+    <article class="brief-card urgent detective-prompt">
+      <span class="term-chip">次の根拠</span>
+      <h3>${htmlText(check.question)}</h3>
+      <div class="option-grid compact-options">
+        ${check.options
+          .map(
+            (option) => `
+              <button class="option-button ${state.intakeNextCheckChoice === option.id ? "selected" : ""}" type="button" data-intake-next="${htmlAttr(option.id)}">
+                <strong>${htmlText(option.label)}</strong>
+              </button>
+            `,
+          )
+          .join("")}
+      </div>
+    </article>
+  `;
+}
+
+function bindIntakeNextCheck() {
+  const check = intakeNextCheck();
+  view.querySelectorAll("[data-intake-next]").forEach((button) => {
+    button.addEventListener("click", () => {
+      state.intakeNextCheckChoice = button.dataset.intakeNext;
+      const selected = check.options.find((option) => option.id === state.intakeNextCheckChoice);
+      renderPhase();
+      mentor(selected?.feedback ?? "次に見る根拠を一つに絞ろう。");
+      focusRevealedPhaseContent();
+    });
+  });
+}
+
+function intakeRebuttalCheck() {
+  const checks = {
+    case001: {
+      line: "妹に説明するだけです。そこまで厳密に見る必要がありますか？",
+      question: "返すカードを選べ。",
+      options: [
+        {
+          id: "price_point_reply",
+          label: "取引事例の日付",
+          detail: "事例の日付が評価時点とずれている",
+          correct: true,
+          playerLine: "説明に使うからこそ、時点の違う価格は混ぜられません。",
+          feedback: "田中さんの希望には戻らなかった。資料に戻した、それでいい。",
+          reaction: "……日付が違うだけでも、そこまで見ますか。分かりました、そのまま並べるのはまずいんですね。",
+        },
+        { id: "hope_memo_reply", label: "田中の希望額メモ", detail: "田中「できれば高めに」", correct: false, feedback: "希望額のメモでは返せない。比較できる日付と事例に戻ろう。" },
+        { id: "sister_memo_reply", label: "妹への説明メモ", detail: "用途: 相続協議の説明資料", correct: false, feedback: "説明メモは目的だ。価格を比べる資料としては弱い。" },
+      ],
+    },
+    case002: {
+      line: "銀行に出すだけです。利回りを少し低めに見るくらい、問題ないですよね？",
+      question: "返すカードを選べ。",
+      options: [
+        {
+          id: "noi_reply",
+          label: "収入と費用の内訳",
+          detail: "費用控除後の収益をまだ確認していない",
+          correct: true,
+          playerLine: "収入と費用を見ないまま、利回りだけは動かせません。",
+          feedback: "だから、希望から決めない。先に収益の中身だ。",
+          reaction: "利回りを少し動かすだけで、そこまで価格に出るんですね。……では、収入と費用を見ないままでは難しいと。",
+        },
+        { id: "loan_amount_reply", label: "希望融資額", detail: "借換に必要な金額", correct: false, feedback: "融資額では返せない。収益の中身を示そう。" },
+        { id: "owner_yield_reply", label: "依頼者が出した利回り表", detail: "依頼者側の希望利回り", correct: false, feedback: "提示利回りは未信頼情報だ。収入と費用の内訳で返そう。" },
+      ],
+    },
+    case003: {
+      line: "市も前向きです。接道まで細かく見なくても、最大容積で検討できますよね？",
+      question: "返すカードを選べ。",
+      options: [
+        {
+          id: "road_reply",
+          label: "前面道路とのつながり",
+          detail: "計画が成立する接道か未確認",
+          correct: true,
+          playerLine: "接道を見ないと、最大容積の計画を前提にはできません。",
+          feedback: "期待の話に乗らなかったな。条件の話に戻せた。",
+          reaction: "市が前向きでも足りないんですか。……接道で、そこまで変わるんですね。",
+        },
+        { id: "max_plan_reply", label: "最大容積を使った事業計画", detail: "依頼者案。成立条件は未確認", correct: false, feedback: "計画から逆算しない。接道と規制で返そう。" },
+        { id: "city_mood_reply", label: "市の前向きな反応", detail: "担当者感触。法的条件ではない", correct: false, feedback: "行政の感触だけでは返せない。使える条件を確認しよう。" },
+      ],
+    },
+  };
+  return checks[state.caseId] ?? checks.case001;
+}
+
+function intakeRebuttalMarkup() {
+  const check = intakeRebuttalCheck();
+  return `
+    <article class="brief-card urgent detective-prompt">
+      <span class="term-chip">依頼者の反論</span>
+      <p class="client-quote">「${htmlText(check.line)}」</p>
+      <h3>${htmlText(check.question)}</h3>
+      <div class="option-grid compact-options">
+        ${check.options
+          .map(
+            (option) => `
+              <button class="option-button ${state.intakeRebuttalChoice === option.id ? "selected" : ""}" type="button" data-intake-rebuttal="${htmlAttr(option.id)}">
+                <strong>${htmlText(option.label)}</strong>
+                ${option.detail ? `<span>${htmlText(option.detail)}</span>` : ""}
+              </button>
+            `,
+          )
+          .join("")}
+      </div>
+    </article>
+  `;
+}
+
+function intakeRebuttalOutcomeMarkup() {
+  const check = intakeRebuttalCheck();
+  const selected = check.options.find((option) => option.id === state.intakeRebuttalChoice);
+  if (!selected?.correct || !selected.reaction) return "";
+  return `
+    <article class="brief-card urgent">
+      <span class="term-chip">反論の手応え</span>
+      <div class="dialogue">
+        ${selected.playerLine ? speakerMarkup("player", { name: "新人鑑定士", initial: "新" }, selected.playerLine) : ""}
+        ${speakerMarkup("client", currentCase().client, selected.reaction, { pressure: false })}
+      </div>
+    </article>
+  `;
+}
+
+function bindIntakeRebuttalCheck() {
+  const check = intakeRebuttalCheck();
+  view.querySelectorAll("[data-intake-rebuttal]").forEach((button) => {
+    button.addEventListener("click", () => {
+      state.intakeRebuttalChoice = button.dataset.intakeRebuttal;
+      const selected = check.options.find((option) => option.id === state.intakeRebuttalChoice);
+      renderPhase();
+      mentor(selected?.feedback ?? "反論には希望ではなく、比較できる根拠で返そう。");
+      focusRevealedPhaseContent();
+    });
+  });
 }
 
 function renderPhase() {
@@ -560,7 +909,9 @@ function renderPhase() {
   wrapPhaseGameDesk();
   applyStoryGate();
   bindNovelScene();
+  bindMentorAdviceButton();
   updateBgmPlayback();
+  speakVisibleConversation();
 }
 
 function wrapPhaseGameDesk(variant) {
@@ -628,6 +979,18 @@ function gameplayCastMarkup(key) {
     reportCount: state.selectedReport.size,
   });
   return gameplayCast.gameplayCastMarkup(key, reactions);
+}
+
+function gameplayCastVoiceLines(key) {
+  return gameplayCast.gameplayCastReactions(key, {
+    client: currentCase().client,
+    caseInfo: currentCase(),
+    scenario: activeMarketScenario(),
+    found: activeHotspots().filter((spot) => state.evidence.includes(spot.id)).length,
+    selectedDocs: state.selectedDocs.size,
+    supportCount: state.adjustmentSupport.size,
+    reportCount: state.selectedReport.size,
+  }).map((reaction) => voiceLine(reaction.kind, reaction.speaker, reaction.line));
 }
 
 function phaseGameKey() {
@@ -703,6 +1066,66 @@ function announceNovelLine() {
   announce(`ストーリー ${index + 1}/${lines.length}。${line.name}。${line.line}`);
 }
 
+function speakVisibleConversation() {
+  const storyLines = phaseStoryLines();
+  if (storyLines.length > 0 && !state.storyRevealed) {
+    const index = Math.min(state.storyIndex, storyLines.length - 1);
+    const line = storyLines[index];
+    const currentLine = storyVoiceLine(index);
+    speakLines([currentLine], {
+      key: `story:${state.caseId}:${state.phase}:${index}:${line.speaker}:${line.line}`,
+    });
+    const nextLine = storyVoiceLine(index + 1);
+    if (nextLine) prewarmVoiceLines([nextLine]);
+    return;
+  }
+  if (Date.now() < mentorVoicePendingUntil) return;
+
+  const dialogueLines = visibleDialogueVoiceLines();
+  if (dialogueLines.length > 0) {
+    speakLines(dialogueLines, { key: `dialogue:${state.caseId}:${state.phase}:${dialogueVoiceKey(dialogueLines)}` });
+    return;
+  }
+
+  if (state.phase > 0 && state.phase < 5) {
+    const castLines = gameplayCastVoiceLines(phaseGameKey());
+    if (castLines.length > 0) {
+      speakLines(castLines, { key: `cast:${state.caseId}:${state.phase}:${dialogueVoiceKey(castLines)}` });
+    }
+  }
+}
+
+function storyVoiceLine(index) {
+  const storyLines = phaseStoryLines();
+  const line = storyLines[index];
+  if (!line) return null;
+  const kind = line.speaker === "narrator" ? "narrator" : line.speaker;
+  const speaker = kind === "client" ? currentCase().client : { name: line.name };
+  return voiceLine(kind, speaker, line.line, { lineId: `story:${state.caseId}:${state.phase}:${index}:${line.speaker}` });
+}
+
+function visibleDialogueVoiceLines() {
+  return Array.from(view.querySelectorAll(".dialogue .speech"))
+    .filter((node) => !node.closest("[hidden], [aria-hidden='true']"))
+    .map((node) => {
+      const kind = node.classList.contains("client") ? "client" : node.classList.contains("player") ? "player" : "mentor";
+      return voiceLine(kind, kind === "client" ? currentCase().client : {}, speechTextFromNode(node), {
+        emotion: node.classList.contains("pressure") ? "anxious_pressure" : undefined,
+      });
+    });
+}
+
+function speechTextFromNode(node) {
+  const clone = node.cloneNode(true);
+  clone.querySelector("strong")?.remove();
+  clone.querySelector(".speaker-portrait")?.remove();
+  return clone.textContent.replace(/[「」]/g, "").replace(/\s+/g, " ").trim();
+}
+
+function dialogueVoiceKey(lines) {
+  return lines.map((line) => `${line.kind}:${line.name}:${line.text}`).join("|");
+}
+
 function focusRevealedPhaseContent() {
   const target =
     view.querySelector(":scope > :not(.novel-scene):not([hidden]) button:not(:disabled)") ??
@@ -715,8 +1138,8 @@ function focusRevealedPhaseContent() {
 function phaseStoryLines() {
   if (state.phase < 0) {
     return [
-      { speaker: "player", name: "新人鑑定士", line: "今日からあなたは、先輩鑑定士の横で事件ファイルを読む新人鑑定士だ。" },
-      { speaker: "mentor", name: "先輩鑑定士", line: "どの案件も、数字の裏に人の都合がある。根拠で切り分けろ。" },
+      { speaker: "player", name: "新人鑑定士", line: "依頼ファイルを開く。まず、どの根拠が使えるか見る。" },
+      { speaker: "mentor", name: "先輩鑑定士", line: "どの案件も、数字の裏に人の都合がある。迷ったら、希望ではなく根拠に戻ろう。" },
     ];
   }
   const caseInfo = currentCase();
@@ -729,12 +1152,12 @@ function phaseStoryLines() {
           speaker: "mentor",
           name: "先輩鑑定士",
           line: state.challengeMode
-            ? `前回ランクは${record.lastRank ?? "未記録"}。監査では、前回見落とした根拠まで拾い直せ。`
+            ? `前回ランクは${record.lastRank ?? "未記録"}。監査では、前回見落とした根拠まで拾い直そう。`
             : `前回ランクは${record.lastRank ?? "未記録"}。同じ案件でも、提示する三枚を変えれば論証は変わる。`,
         }
       : null;
   const commonPressure = {
-    case001: "高めに見てほしい。その一言が、正常価格を濁らせる。",
+    case001: "そこだ。希望は聞く。価格には混ぜるな。",
     case002: "利回りを少しだけ低く。その一言が、収益価格を歪ませる。",
     case003: "最大容積で見てほしい。その一言が、最有効使用を飛ばさせる。",
   };
@@ -742,8 +1165,8 @@ function phaseStoryLines() {
     0: [
       { speaker: "narrator", name: "第一章", line: `${caseInfo.shortTitle}の依頼ファイルを開いた。` },
       { speaker: "client", name: client.name, line: client.tension },
-      { speaker: "player", name: "新人鑑定士", line: "依頼者の事情は聞く。でも、評価額は根拠から組み立てる。" },
-      { speaker: "mentor", name: "先輩鑑定士", line: commonPressure[state.caseId] ?? "依頼者の言葉を、根拠と希望に分けろ。" },
+      { speaker: "player", name: "新人鑑定士", line: "事情は聞く。でも、評価額に入れる根拠は分ける。" },
+      { speaker: "mentor", name: "先輩鑑定士", line: commonPressure[state.caseId] ?? "依頼者の言葉は、根拠と希望に分けて聞こう。" },
       repeatLine,
       scenario
         ? { speaker: "narrator", name: "市場メモ", line: `${scenario.title}。${scenario.appraisalHint}` }
@@ -751,19 +1174,19 @@ function phaseStoryLines() {
     ],
     1: [
       { speaker: "narrator", name: "第二章", line: "現地に着いた。写真の中に、評価額を動かす違和感が隠れている。" },
-      { speaker: "mentor", name: "先輩鑑定士", line: "きれいかどうかじゃない。価格形成要因として説明できる傷を探せ。" },
+      { speaker: "mentor", name: "先輩鑑定士", line: "きれいかどうかじゃない。価格形成要因として説明できる傷を見よう。" },
       { speaker: "player", name: "新人鑑定士", line: "見た目の印象ではなく、減価やリスクとして説明できる箇所を拾います。" },
       { speaker: "client", name: client.name, line: "そこまで細かく見なくても、だいたい分かりますよね。" },
     ],
     2: [
       { speaker: "narrator", name: "第三章", line: "登記、契約、都市計画、収益資料。紙は静かだが、矛盾は声を出す。" },
-      { speaker: "mentor", name: "先輩鑑定士", line: "資料は集めるだけでは足りない。今回の価格形成要因になるかを選別しろ。" },
+      { speaker: "mentor", name: "先輩鑑定士", line: "資料は集めるだけでは足りない。今回の価格形成要因になるものだけ残そう。" },
       { speaker: "player", name: "新人鑑定士", line: "依頼者説明、登記、取引事例を並べて、価格に効く矛盾だけを残します。" },
       { speaker: "client", name: client.name, line: "こちらに都合のいい資料から見てもらえれば十分です。" },
     ],
     3: [
       { speaker: "narrator", name: "第四章", line: "証拠は揃った。ここからは、価格にどう反映するかを決める時間だ。" },
-      { speaker: "mentor", name: "先輩鑑定士", line: "調整幅は勘ではない。証拠カード二枚で、減価と市場条件を支えろ。" },
+      { speaker: "mentor", name: "先輩鑑定士", line: "調整幅は勘ではない。証拠カード二枚で、減価と市場条件を支えよう。" },
       { speaker: "player", name: "新人鑑定士", line: "比準、収益、開発可能性を見比べて、どの根拠で調整するか決めます。" },
       scenario
         ? { speaker: "narrator", name: "市場条件", line: `${scenario.title}。この周回では、${scenario.appraisalHint}` }
@@ -774,7 +1197,7 @@ function phaseStoryLines() {
       { speaker: "client", name: client.name, line: "その根拠で、本当にその評価額になるんですか。" },
       { speaker: "player", name: "新人鑑定士", line: "はい。提示する三枚で、事実、分析、結論の順に説明します。" },
       repeatLine,
-      { speaker: "mentor", name: "先輩鑑定士", line: "反論には、言葉ではなく根拠で返せ。最後は説明可能な裁量の範囲に収めろ。" },
+      { speaker: "mentor", name: "先輩鑑定士", line: "反論には、言葉ではなく根拠で返そう。最後は説明可能な裁量の範囲に収める。" },
     ],
   };
   return (linesByPhase[state.phase] ?? []).filter(Boolean);
@@ -863,7 +1286,7 @@ function bindNovelScene() {
       state.storyRevealed = true;
       renderPhase();
       announce(`${novelActionLabel()}。操作画面を表示しました。`);
-      mentor("シーンを閉じた。ここから判断を進めろ。");
+      mentor("俺は横で見る。まず一枚、使える根拠を選ぼう。");
       focusRevealedPhaseContent();
     }
   });
@@ -944,7 +1367,7 @@ function renderCaseSelect() {
   mentor(
     totalCompletions > 0
       ? "記録は案件ごとに保存される。最有効使用は全案件の前提だが、類型ごとに見るべき根拠と説明の順序が変わる。"
-      : "案件を選べ。最有効使用は全ての鑑定評価の前提だ。再開発予定地では特に、どの用途・規模で開発するのが最有効使用かが価格判断の中心になる。",
+      : "案件を選ぼう。最有効使用は全ての鑑定評価の前提だ。再開発予定地では特に、どの用途・規模で開発するのが最有効使用かが価格判断の中心になる。",
   );
   view.querySelectorAll("[data-start-case]").forEach((button) => {
     button.addEventListener("click", () => animateCaseSelection(button));
@@ -995,8 +1418,9 @@ function productPanelContent(panel, entries, totalCompletions) {
       <div class="product-list">
         <div><strong>BGM</strong><span>現在 ${htmlText(bgmStatusLabel())}</span></div>
         <div><strong>効果音</strong><span>現在 ${htmlText(seStatusLabel())}</span></div>
+        <div><strong>会話音声</strong><span>現在 ${htmlText(voiceStatusLabel())}</span></div>
         <div><strong>低刺激</strong><span>現在 ${htmlText(stimulusStatusLabel())}</span></div>
-        <p>上部バーのボタンで、BGM、SE、低刺激をいつでも切り替えられる。</p>
+        <p>上部バーのボタンで、BGM、SE、VOICE、低刺激をいつでも切り替えられる。</p>
       </div>
     `;
   }
@@ -1054,6 +1478,7 @@ function productPanelContent(panel, entries, totalCompletions) {
       <div><strong>画像</strong><span>一部の現地調査背景と依頼者ポートレートは、開発中にOpenAI画像生成モデルで作成した事前生成アセットです。</span></div>
       <div><strong>実行中AI生成</strong><span>なし。ゲームプレイ中にプレイヤー入力から画像、音声、会話、文章を生成しません。</span></div>
       <div><strong>音源</strong><span>ローカル同梱BGM素材。詳細は docs/third-party-audio-notices.md に記録。</span></div>
+      <div><strong>会話音声</strong><span>ブラウザまたはOSの日本語音声合成を使用。外部送信と実行中生成素材の保存は行わない。</span></div>
       <div><strong>素材台帳</strong><span>生成画像は assets-manifest.json で caseId、用途、altText、sha256、AI開示区分を管理。</span></div>
       <p>これは教育用ゲームであり、実際の鑑定評価書・価格意見ではない。</p>
     </div>
@@ -1197,7 +1622,7 @@ function renderIntake() {
         body: "駅南口の老朽倉庫街を、共同住宅と店舗の複合開発用地として評価する依頼。依頼者は黒川開発。既存テナントと近隣住民の反発が残っている。",
         clientLine:
           "市も前向きですし、立退きは後で何とかします。できれば最大容積の<span class=\"pressure-word\">マンション用地</span>として見てください。",
-        mentorLine: "最有効使用は願望ではない。合法性、物理的可能性、市場性、収益性を順に潰せ。",
+        mentorLine: "最有効使用は願望ではない。合法性、物理的可能性、市場性、収益性を順に確認しよう。",
         issues: [
           "価格の種類: 正常価格として扱えるか",
           "価格時点: 2026-05-05",
@@ -1216,7 +1641,7 @@ function renderIntake() {
         body: "駅前商業ビルの借換融資を前に、収益物件としての鑑定評価を依頼された。依頼者は森下不動産の佐伯。銀行提出用の評価額を気にしている。",
         clientLine:
           "銀行が見るので、できれば還元利回りは<span class=\"pressure-word\">低めに</span>見ていただけると助かります。",
-        mentorLine: "まず価格時点と対象不動産を固定し、総収益、必要諸経費、還元利回りを希望額から切り離せ。",
+        mentorLine: "まず価格時点と対象不動産を固定しよう。総収益、必要諸経費、還元利回りは希望額から切り離す。",
         issues: [
           "価格の種類: 正常価格として扱えるか",
           "価格時点: 2026-05-05",
@@ -1246,32 +1671,72 @@ function renderIntake() {
         pressureTitle: "依頼者の希望額を参考にして進める",
         pressureDetail: "依頼者満足は高いが、鑑定評価額の説明可能な範囲を外れる。",
       });
+  if (!state.intakeRiskChoice) {
+    view.innerHTML = `
+      ${activeNovelSceneMarkup()}
+      ${intakeRiskMarkup()}
+    `;
+    bindIntakeRiskCheck();
+    return;
+  }
+  if (!state.intakeNextCheckChoice) {
+    view.innerHTML = `
+      ${activeNovelSceneMarkup()}
+      ${intakeNextMarkup()}
+    `;
+    bindIntakeNextCheck();
+    return;
+  }
+  if (!state.intakeRebuttalChoice) {
+    view.innerHTML = `
+      ${activeNovelSceneMarkup()}
+      ${intakeRebuttalMarkup()}
+    `;
+    bindIntakeRebuttalCheck();
+    return;
+  }
+  const intakeSummaryMarkup = state.intakeChoice
+    ? `
+      <div class="brief-grid">
+        <article class="brief-card">
+          <span class="term-chip">今回の線引き</span>
+          <h3>${state.intakeChoice === "professional" ? htmlText(intake.professionalTitle) : htmlText(intake.pressureTitle)}</h3>
+          <p>${state.intakeChoice === "professional" ? htmlText(intake.professionalDetail) : htmlText(intake.pressureDetail)}</p>
+          <details class="brief-details">
+            <summary>依頼メモを見る</summary>
+            <div class="dialogue">
+              ${speakerMarkup("client", client, intake.clientLine, { pressure: true })}
+              ${speakerMarkup("mentor", {}, intake.mentorLine)}
+            </div>
+            <h4>依頼目的</h4>
+            <p>${htmlText(intake.body)}</p>
+            <h4>引っかかり</h4>
+            <ul class="doc-list">
+              ${intake.issues.map((issue) => `<li>${htmlText(issue)}</li>`).join("")}
+              ${
+                scenario
+                  ? `<li>今回の市場条件: ${htmlText(scenario.title)} — ${htmlText(scenario.detail)} 調整時は${htmlText(scenario.appraisalHint)}</li>`
+                  : ""
+              }
+              ${state.challengeMode ? "<li>監査レビュー: 全現地論点、重要3カード、中立判断を確認</li>" : ""}
+            </ul>
+          </details>
+        </article>
+      </div>
+    `
+    : `
+      <article class="brief-card urgent detective-prompt">
+        <span class="term-chip">受ける前の線引き</span>
+        <p>${htmlText(intake.title)}</p>
+        <h3>この依頼をどう受ける？</h3>
+      </article>
+    `;
+
   view.innerHTML = `
     ${activeNovelSceneMarkup()}
     ${tutorialMarkup()}
-    <div class="brief-grid">
-      <article class="brief-card">
-        <span class="term-chip">${htmlText(intake.chip)}</span>
-        <h3>${htmlText(intake.title)}</h3>
-        <p>${htmlText(intake.body)}</p>
-        <div class="dialogue">
-          ${speakerMarkup("client", client, intake.clientLine, { pressure: true })}
-          ${speakerMarkup("mentor", {}, intake.mentorLine)}
-        </div>
-      </article>
-      <article class="brief-card urgent">
-        <span class="term-chip">鑑定評価上の初期論点</span>
-        <ul class="doc-list">
-          ${intake.issues.map((issue) => `<li>${htmlText(issue)}</li>`).join("")}
-          ${
-            scenario
-              ? `<li>今回の市場条件: ${htmlText(scenario.title)} — ${htmlText(scenario.detail)} 調整時は${htmlText(scenario.appraisalHint)}</li>`
-              : ""
-          }
-          ${state.challengeMode ? "<li>監査レビュー: 全現地論点、重要3カード、中立判断を確認</li>" : ""}
-        </ul>
-      </article>
-    </div>
+    ${state.intakeChoice ? "" : intakeRebuttalOutcomeMarkup()}
+    ${intakeSummaryMarkup}
     <div class="option-grid phase-actions">
       <button class="option-button ${state.intakeChoice === "professional" ? "selected" : ""}" data-intake="professional">
         <strong>${htmlText(intake.professionalTitle)}</strong>
@@ -1284,6 +1749,7 @@ function renderIntake() {
     </div>
     <div class="phase-actions">
       <button class="action-button" id="next-phase" ${state.intakeChoice ? "" : "disabled"}>現地調査へ</button>
+      ${mentorAdviceButtonMarkup()}
     </div>
   `;
 
@@ -1330,6 +1796,18 @@ function renderIntake() {
   view.querySelector("#next-phase")?.addEventListener("click", () => setPhase(1));
 }
 
+function hotspotEvidencePreviewMarkup(id) {
+  const item = evidenceCatalog[id];
+  if (!item) return "";
+  return `
+    <span class="hotspot-evidence-preview evidence-${classToken(evidenceCategory(id), "investigation")}" aria-hidden="true">
+      <em>${htmlText(item.term)}</em>
+      <strong>${htmlText(item.title)}</strong>
+      <small>${htmlText(item.detail)}</small>
+    </span>
+  `;
+}
+
 function renderFieldSurvey() {
   renderEvidenceBoard();
   const caseInfo = currentCase();
@@ -1347,9 +1825,9 @@ function renderFieldSurvey() {
           <button
             class="hotspot hotspot-${classToken(spot.id)} ${state.evidence.includes(spot.id) ? "found" : ""}"
             data-hotspot="${htmlAttr(spot.id)}"
-            aria-label="${htmlAttr(evidenceCatalog[spot.id].title)}"
-            title="${htmlAttr(evidenceCatalog[spot.id].title)}"
-          ><span>${htmlText(spot.label)}</span></button>
+            aria-label="${htmlAttr(`${spot.label}。証拠カード: ${evidenceCatalog[spot.id].term}、${evidenceCatalog[spot.id].title}`)}"
+            title="${htmlAttr(`${evidenceCatalog[spot.id].term}: ${evidenceCatalog[spot.id].title}`)}"
+          ><span class="hotspot-label">${htmlText(spot.label)}</span>${hotspotEvidencePreviewMarkup(spot.id)}</button>
         `,
         )
         .join("")}
@@ -1373,7 +1851,7 @@ function renderFieldSurvey() {
     <div class="phase-checkline">終了条件: ${htmlText(foundCount >= 3 ? "資料照合へ進める" : `あと${3 - foundCount}か所発見`)} / 監査目標: ${htmlText(foundCount)} / ${htmlText(spots.length)}</div>
     <div class="phase-actions">
       <button class="action-button" id="next-phase" ${foundCount >= 3 ? "" : "disabled"}>資料照合へ</button>
-      <button class="ghost-button" id="hint-field">先輩にヒントを聞く</button>
+      ${mentorAdviceButtonMarkup()}
     </div>
   `;
 
@@ -1391,15 +1869,6 @@ function renderFieldSurvey() {
       showLearningCard("評価根拠の選別", decoy.lesson);
       mentor("そこは気になるが、鑑定評価額を説明する根拠としては弱い。学びカードで理由を確認しよう。");
     });
-  });
-  view.querySelector("#hint-field").addEventListener("click", () => {
-    mentor(
-      state.caseId === "case003"
-        ? "再開発予定地の現地調査は『更地なら何が建つか』ではない。借家人、接道、規制、災害履歴、既存建物リスクを拾う。"
-        : state.caseId === "case002"
-        ? "収益物件の現地調査は『満室に見えるか』ではない。テナント構成、空室、修繕、動線、契約期間を収益リスクとして拾う。"
-        : "現地調査は『見た目がきれいか』ではない。接道、境界、嫌悪施設、劣化を価格形成要因として拾う。",
-    );
   });
   view.querySelector("#next-phase")?.addEventListener("click", () => setPhase(2));
 }
@@ -1475,6 +1944,7 @@ function renderDocuments() {
     <div class="phase-checkline">終了条件: ${htmlText(state.selectedDocs.size >= 2 ? "鑑定判断へ進める" : `あと${2 - state.selectedDocs.size}件照合`)}</div>
     <div class="phase-actions">
       <button class="action-button" id="next-phase" ${state.selectedDocs.size >= 2 ? "" : "disabled"}>鑑定判断へ</button>
+      ${mentorAdviceButtonMarkup()}
     </div>
   `;
 
@@ -1760,6 +2230,7 @@ function renderAppraisal() {
     <div class="phase-checkline">終了条件: 査定方式 ${state.comparableChoice ? "済" : "未"} / リスク反映 ${state.adjustmentChoice ? "済" : "未"} / 調整幅 ${state.adjustmentBand ? "済" : "未"} / 調整根拠 ${state.adjustmentSupport.size}/2</div>
     <div class="phase-actions">
       <button class="action-button" id="next-phase" ${state.comparableChoice && state.adjustmentChoice && state.adjustmentBand && state.adjustmentSupport.size >= 2 ? "" : "disabled"}>報告・対決へ</button>
+      ${mentorAdviceButtonMarkup()}
     </div>
   `;
 
@@ -1863,7 +2334,7 @@ function renderAppraisal() {
   });
   view.querySelector("#next-phase")?.addEventListener("click", () => {
     setPhase(4);
-    mentor("報告では証拠カードを3枚だけ選ぶ。全部ではなく、論証として強い根拠を選べ。");
+    mentor("報告では証拠カードを3枚だけ使う。全部ではなく、論証として強い根拠を選ぼう。");
   });
 }
 
@@ -2017,10 +2488,10 @@ function renderReport() {
     ? "銀行評価を通すため、還元利回りは4%台で見せたいんです。ここだけ少し丸められませんか。"
     : "妹にはこの家の価値を高く見せたいんです。根拠の範囲で、上側に説明できる余地はありませんか。");
   const mentorPressure = currentCase().reportPressure?.mentor ?? (isRedevelopmentCase
-    ? "計画を聞くのは実務だ。ただし最有効使用は、法規制、権利調整、市場性で説明できる範囲に収めろ。"
+    ? "計画を聞くのは実務だ。ただし最有効使用は、法規制、権利調整、市場性で説明できる範囲に収める。"
     : isIncomeCase
-    ? "借換目的は評価目的として聞く。ただし収益価格は、純収益と利回りで説明できる範囲に収めろ。"
-    : "依頼者の事情は評価目的を理解する材料だ。最後は説明可能な裁量として君の判断を示せ。");
+    ? "借換目的は評価目的として聞く。ただし収益価格は、純収益と利回りで説明できる範囲に収める。"
+    : "依頼者の事情は評価目的を理解する材料だ。最後は説明可能な裁量として君の判断を示そう。");
   const reportIds = Array.from(state.selectedReport);
   const rebuttal = clientRebuttal(reportIds);
   const scenario = activeMarketScenario();
@@ -2082,6 +2553,7 @@ function renderReport() {
     <div class="phase-actions">
       <button class="action-button ${canFinish ? "" : "needs-steps"}" id="finish-case" ${canFinish ? "" : `aria-describedby="report-missing-steps"`}>最終レビューを見る</button>
       <button class="ghost-button" id="restart-case">最初から再調査</button>
+      ${mentorAdviceButtonMarkup()}
     </div>
     ${canFinish ? "" : `<div class="phase-checkline report-missing-steps" id="report-missing-steps">未完了: ${htmlText(missingSteps.join(" / "))}</div>`}
   `;
@@ -2130,7 +2602,7 @@ function renderReport() {
       state.rebuttalSupported = false;
       if (option.correct) {
         award(`rebuttal-${option.id}`, { reasoning: 3, ethics: 2 });
-        mentor("再反論の方針は妥当だ。次に、提示済み証拠のどれで支えるかを選べ。");
+        mentor("再反論の方針は妥当だ。次に、提示済み証拠のどれで支えるかを選ぼう。");
         announce(`再反論。${option.label}`);
       } else {
         award(`rebuttal-${option.id}`, { reasoning: -3 });
@@ -2148,7 +2620,7 @@ function renderReport() {
       state.rebuttalSupported = Boolean(option?.correct && option.requiredEvidence === state.rebuttalEvidence);
       if (state.rebuttalSupported) {
         award(`rebuttal-evidence-${state.rebuttalEvidence}`, { reasoning: 4, appraisal: 2 });
-        mentor("再反論と根拠カードがつながった。依頼者の言葉ではなく、評価書の論証で返せている。");
+        mentor("再反論と根拠カードがつながった。依頼者の言葉ではなく、評価書の論証に戻せた。");
       } else {
         award(`rebuttal-evidence-${state.rebuttalEvidence}-weak`, { reasoning: -2 });
         showLearningCard("再反論の根拠", "反論方針が正しくても、支えるカードがずれると報告書では弱い。相手の反論に直接刺さる根拠を選ぶ。");
@@ -2222,8 +2694,8 @@ function rebuttalResolutionMarkup(option, evidenceId) {
     ? `${evidence?.term ?? "根拠"}として「${evidence?.title ?? "提示済み証拠"}」を置きます。評価額は希望額ではなく、この前提から説明します。`
     : `提示したカードの接続が弱いです。反論された一点に直接刺さる根拠へ組み直します。`;
   const mentorLine = supported
-    ? "二往復目まで根拠で返せた。最後は説明可能な裁量の範囲で、評価書の結論として閉じろ。"
-    : "反論の往復で崩れるなら、報告根拠の選び方に戻れ。強い三枚を組み直すんだ。";
+    ? "二往復目まで根拠で返せた。最後は説明可能な裁量の範囲で、評価書の結論として閉じよう。"
+    : "反論の往復で崩れるなら、報告根拠の選び方に戻ろう。強い三枚を組み直すんだ。";
   return `
     <div class="dialogue rebuttal-resolution" aria-label="報告対決 二往復目">
       ${speakerMarkup("client", client, clientLine, { pressure: !supported })}
@@ -2716,7 +3188,7 @@ function caseHighValueCards() {
 function resultCelebrationText(finalGrade, total) {
   if (finalGrade === "S") return "証拠の拾い方、調整理由、裁量判断が一本の鑑定ストーリーとして通った。";
   if (finalGrade === "A") return "結論は実務に耐える。次周は市場シナリオに合わせて三枚の根拠を組み替えたい。";
-  if (total >= 70) return "評価の骨格はある。弱い根拠や再反論の不足を潰せば上位ランクが狙える。";
+  if (total >= 70) return "評価の骨格はある。弱い根拠や再反論の不足を補えば上位ランクが狙える。";
   return "現地、資料、判断の接続が切れている。先輩メモを頼りに、根拠の順序から組み直そう。";
 }
 
@@ -2729,9 +3201,9 @@ function resultMentorLine(total, reportIds) {
     return "結論は崩れていない。ただ、根拠の順序を変えれば依頼者への刺さり方も変わる。";
   }
   if (state.ethicsChoice !== "neutral") {
-    return "根拠を超えて寄せた瞬間、説明の強さが落ちた。最後は説明可能な裁量の範囲に収めろ。";
+    return "根拠を超えて寄せた瞬間、説明の強さが落ちた。最後は説明可能な裁量の範囲に収めよう。";
   }
-  return "拾った根拠が報告の三枚に変換しきれていない。現地、資料、判断のつながりを組み直せ。";
+  return "拾った根拠が報告の三枚に変換しきれていない。現地、資料、判断のつながりを組み直そう。";
 }
 
 function scoreWeight(scores) {
@@ -2795,6 +3267,8 @@ document.addEventListener("click", (event) => {
 
 document.addEventListener("pointerdown", primeBgmPlayback, { once: true, passive: true });
 document.addEventListener("keydown", primeBgmPlayback, { once: true });
+document.addEventListener("pointerdown", primeVoicePlayback, { once: true, passive: true });
+document.addEventListener("keydown", primeVoicePlayback, { once: true });
 
 bgmToggle?.addEventListener("click", () => {
   toggleBgm();
@@ -2804,11 +3278,19 @@ audioToggle?.addEventListener("click", () => {
   toggleAudio();
 });
 
+voiceToggle?.addEventListener("click", () => {
+  toggleVoice();
+  speakVisibleConversation();
+});
+
 stimulusToggle?.addEventListener("click", () => {
   lowStimulus = !lowStimulus;
   localStorage.setItem(audio.STIMULUS_STORAGE_KEY, String(lowStimulus));
   renderStimulusToggle();
+  renderVoiceToggle();
   document.body.classList.toggle("low-stimulus", lowStimulus);
+  if (lowStimulus) cancelVoice();
   updateBgmPlayback();
+  if (!lowStimulus) speakVisibleConversation();
 });
 }

@@ -654,6 +654,8 @@ caseDefinitions: {
         detail: "面積不一致を先に閉じ、依頼者説明60坪を根拠にしない理由を返す。",
         requiredEvidence: "areaMismatch",
         correct: true,
+        successClientLine: "……面積と評価対象が違うだけで、そこまで変わるんですね。分かりました。ただ、この額をそのまま妹に見せるのは、正直まだ不安です。",
+        successBeatLine: "田中修一が一瞬、資料に目を落とす。",
       },
       {
         id: "familySympathy",
@@ -826,6 +828,8 @@ caseDefinitions: {
         detail: "レントロールと還元利回り差を使い、依頼者の4%台希望を切り離す。",
         requiredEvidence: "capRateGap",
         correct: true,
+        successClientLine: "……市場利回りまで並べられると、銀行向けに数字だけ丸めるのは難しいですね。ただ、それで借換先が納得するかは不安です。",
+        successBeatLine: "佐伯亮が、利回り表から収支資料へ視線を移す。",
       },
       {
         id: "bankTone",
@@ -998,6 +1002,8 @@ caseDefinitions: {
         detail: "用途地域マップと実現階数の検算を根拠に、14階案をそのまま採れないと返す。",
         requiredEvidence: "zoningCheck",
         correct: true,
+        successClientLine: "……14階案をそのまま前提にすると、説明会で逆に突かれるということですね。ただ、地権者にどう伝えるかはまだ重いです。",
+        successBeatLine: "黒川航が、計画図ではなく道路条件の資料を見る。",
       },
       {
         id: "developerSchedule",

@@ -101,6 +101,9 @@ async function completeCase(page, caseId, mode = "normal") {
   }
   await page.locator(`[data-rebuttal=${config.rebuttal}]`).click();
   await page.locator(`[data-rebuttal-evidence=${config.rebuttalEvidence}]`).click();
+  if (caseId === "case001") {
+    await expect(page.locator(".rebuttal-resolution")).toContainText("この額をそのまま妹に見せるのは、正直まだ不安です");
+  }
   await page.locator("[data-ethics=neutral]").click();
   await page.getByRole("button", { name: "最終レビューを見る" }).click();
 
@@ -623,6 +626,28 @@ test("case files expose easy normal hard progression", async ({ page }) => {
   await expect(page.locator('[data-case-file="case002"] .file-difficulty')).toHaveText("ノーマル");
   await expect(page.locator('[data-case-file="case002"] .file-guide')).toContainText("純収益");
   await expect(page.locator('[data-case-file="case003"] .file-difficulty')).toHaveText("ハード");
+});
+
+test("first run case desk keeps the opening goal narrow", async ({ page }) => {
+  await page.setViewportSize({ width: 390, height: 844 });
+  await page.goto("http://127.0.0.1:44561/", { waitUntil: "networkidle" });
+  await revealStory(page);
+
+  await expect(page.locator("body")).toHaveClass(/first-run-mode/);
+  await expect(page.locator("#phase-objective")).toHaveText("初回は案件001で、3枚の根拠を集める。依頼者の希望に、根拠で線を引く。");
+  await expect(page.locator("#mode-meta")).toBeHidden();
+  await expect(page.locator("#timer-meta")).toBeHidden();
+  await expect(page.locator(".score-card")).toBeHidden();
+  await expect(page.locator(".case-file-desk")).toHaveClass(/first-run/);
+  await expect(page.locator(".case-library-strip")).toContainText("初回おすすめ 案件001");
+  await expect(page.locator(".case-library-strip")).toContainText("3枚の根拠で希望に線を引く");
+  await expect(page.locator(".first-run-device-note")).toBeVisible();
+  await expect(page.locator(".first-run-device-note")).toContainText("スマホでも導入は遊べます");
+  await expect(page.locator(".first-run-device-note")).toContainText("本格的な資料照合は、PCのほうが見やすいです");
+  await expect(page.locator('[data-case-file="case001"] .file-first-run')).toHaveText("初回おすすめ");
+  await expect(page.locator('[data-case-file="case001"] .file-start-label')).toHaveText("ここから開始");
+  await expect(page.locator('[data-case-file="case001"] .file-description')).toContainText("「高く見せたい」希望に、3枚の根拠で線を引く");
+  await expect(page.getByText("通常最高")).toHaveCount(0);
 });
 
 test("intake starts with a contradiction pick before the appraisal decision", async ({ page }) => {
@@ -1707,6 +1732,11 @@ test("report rebuttal requires a supported evidence answer", async ({ page }) =>
   await expect(page.locator("#mentor-log")).toContainText("反論根拠カードを選ぶ");
   await page.locator("[data-rebuttal-evidence=zoningCheck]").click();
   await expect(page.locator("#mentor-log")).toContainText("つながった");
+  await expect(page.locator('[data-testid="rebuttal-proof-highlight"]')).toContainText("押し返した根拠");
+  await expect(page.locator('[data-testid="rebuttal-proof-highlight"]')).toContainText("高度地区・斜線制限を確認");
+  await expect(page.locator('[data-testid="rebuttal-proof-highlight"]')).toContainText("法令上実現可能な建物ボリューム");
+  await expect(page.locator('[data-testid="rebuttal-beat"]')).toContainText("黒川航が、計画図ではなく道路条件の資料を見る");
+  await expect(page.locator(".rebuttal-resolution")).toContainText("地権者にどう伝えるかはまだ重い");
   await expect(page.getByRole("button", { name: "最終レビューを見る" })).not.toHaveClass(/needs-steps/);
 });
 
@@ -1974,8 +2004,9 @@ test("VOICE toggle persists and reads dialogue with character voice profiles", a
   await expect.poll(() => page.evaluate(() => window.__voiceCalls.filter((call) => call.text).length)).toBeGreaterThan(0);
   const firstLine = await page.evaluate(() => window.__voiceCalls.find((call) => call.text));
   expect(firstLine.text).toContain("依頼ファイルを開く");
-  expect(firstLine.pitch).toBeLessThanOrEqual(1);
-  expect(firstLine.rate).toBeLessThanOrEqual(1);
+  expect(firstLine.pitch).toBeGreaterThan(1);
+  expect(firstLine.rate).toBeGreaterThan(1.1);
+  expect(firstLine.rate).toBeLessThanOrEqual(1.18);
   expect(firstLine.voice).toContain("Otoya");
   await expect(page.locator("#voice-toggle")).toContainText(/VOICE (代替音声|有効)/);
 
@@ -2026,8 +2057,9 @@ test("VOICE prefers local VOICEVOX Engine audio through the production proxy", a
   const playerSynthesis = await page.evaluate(() =>
     window.__voicevoxCalls.find((call) => call.path === "/voicevox/synthesis" && call.speaker === "52"),
   );
-  expect(playerSynthesis.query.speedScale).toBeLessThanOrEqual(1.03);
-  expect(playerSynthesis.query.pitchScale).toBeLessThan(0);
+  expect(playerSynthesis.query.speedScale).toBeGreaterThan(1.1);
+  expect(playerSynthesis.query.speedScale).toBeLessThanOrEqual(1.18);
+  expect(playerSynthesis.query.pitchScale).toBeGreaterThan(0);
   expect(playerSynthesis.query.intonationScale).toBeGreaterThan(1);
   expect(playerSynthesis.query.intonationScale).toBeLessThan(1.25);
   await expect(page.locator("#voice-toggle")).toContainText(/VOICE VOICEVOX/);
@@ -2055,7 +2087,7 @@ test("VOICE prefers local VOICEVOX Engine audio through the production proxy", a
       text: "相続協議の依頼。田中は、低い評価額を避けたがっている。比較できる資料で線引きをして、希望額と評価根拠を分ける。",
     }),
   );
-  expect(longNarratorPlan.fallbackProfile.rate).toBeCloseTo(1.05, 2);
+  expect(longNarratorPlan.fallbackProfile.rate).toBeCloseTo(1.25, 2);
   const narratorStyle = await page.evaluate(async () =>
     window.APPRAISAL_AUDIO.resolveVoicevoxStyle({ castId: "narrator", emotion: "scene_set" }),
   );

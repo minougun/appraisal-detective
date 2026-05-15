@@ -58,7 +58,7 @@ try {
   page.on("pageerror", (error) => errors.push(error.message));
   await page.goto(`http://127.0.0.1:${port}/`, { waitUntil: "networkidle" });
   assert(await page.getByRole("heading", { name: "鑑定DE探偵" }).isVisible(), "title should render under CSP");
-  assert(await page.getByText("案件を1つ選び、通常レビューか監査レビューを選ぶ。").isVisible(), "phase objective should render under CSP");
+  assert(await page.getByText("初回は案件001で、3枚の根拠を集める。依頼者の希望に、根拠で線を引く。").isVisible(), "phase objective should render under CSP");
   assert(errors.length === 0, `browser should not report console/page errors: ${errors.join(" | ")}`);
 
   console.log("production_server_checks=passed");

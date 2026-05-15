@@ -7,8 +7,10 @@
   const VOICEVOX_DIRECT_URLS = navigator.webdriver
     ? []
     : (window.__APPRAISAL_VOICEVOX_ENGINE_URLS__ ?? ["http://127.0.0.1:50021", "http://localhost:50021"]).filter(Boolean);
-  const VOICE_ACTING_VERSION = "2026-05-14-player-natural-speech-2";
+  const VOICE_ACTING_VERSION = "2026-05-15-narrator-1.25-player-crisp-1.14";
   const NARRATOR_TEMPO_MULTIPLIER = 1.25;
+  const PLAYER_CRISP_RATE = 1.14;
+  const PLAYER_CRISP_RATE_CAP = 1.18;
   const VOICE_START_DELAY_MS = 450;
   const PRONUNCIATION_LEXICON_VERSION = "2026-05-13-real-estate-1";
   const STIMULUS_STORAGE_KEY =
@@ -61,7 +63,7 @@
     (localStorage.getItem(STIMULUS_STORAGE_KEY) === "true" || motionReduced.matches);
   const speechFallbackProfiles = {
     narrator: { pitch: 0.86, rate: 1, volume: 0.88 },
-    player: { pitch: 0.96, rate: 1, volume: 0.9 },
+    player: { pitch: 1.02, rate: PLAYER_CRISP_RATE, volume: 0.92 },
     mentor: { pitch: 0.84, rate: 1, volume: 0.96 },
     anxiousClient: { pitch: 1.1, rate: 1.02, volume: 0.92 },
     aggressiveClient: { pitch: 0.86, rate: 1.06, volume: 0.96 },
@@ -73,7 +75,7 @@
   };
   const voiceRateCaps = {
     narrator: 1.25,
-    player: 1.03,
+    player: PLAYER_CRISP_RATE_CAP,
     mentor: 1,
     elderlyClient: 1,
     corporateClient: 1.02,
@@ -105,7 +107,7 @@
         question: ["ノーマル", "ふつう"],
         neutral: ["ノーマル", "ふつう"],
       },
-      defaults: { speed: 1, pitch: -0.008, intonation: 1.02, volume: 0.9, pre: 0.1, post: 0.14, maxRate: 1.03 },
+      defaults: { speed: PLAYER_CRISP_RATE, pitch: 0.006, intonation: 1.13, volume: 0.92, pre: 0.06, post: 0.08, maxRate: PLAYER_CRISP_RATE_CAP },
     },
     mentor: {
       speakerPreferences: ["青山龍星"],
@@ -542,7 +544,11 @@
   }
 
   function tempoMultiplierForVoice(plan = {}) {
-    return plan.kind === "narrator" || plan.castId === "narrator" ? NARRATOR_TEMPO_MULTIPLIER : 1;
+    return isNarratorVoice(plan) ? NARRATOR_TEMPO_MULTIPLIER : 1;
+  }
+
+  function isNarratorVoice(plan = {}) {
+    return plan.kind === "narrator" || plan.castId === "narrator";
   }
 
   function rateCapForCast(castId, kind) {
@@ -550,15 +556,7 @@
   }
 
   function rateCapForPlan(plan = {}) {
-    if (plan.kind !== "narrator" && plan.castId !== "narrator") return rateCapForCast(plan.castId, plan.kind);
-    return narratorRateCapForText(plan.spokenText ?? plan.displayText ?? plan.text ?? "");
-  }
-
-  function narratorRateCapForText(text = "") {
-    const length = cleanVoiceText(text).length;
-    if (length <= 24) return 1.25;
-    if (length <= 45) return 1.15;
-    return 1.05;
+    return isNarratorVoice(plan) ? NARRATOR_TEMPO_MULTIPLIER : rateCapForCast(plan.castId, plan.kind);
   }
 
   function intensityForLine(line, text, emotion) {
@@ -843,7 +841,7 @@
     const defaults = cast.defaults ?? voiceCast.narrator.defaults;
     const emotion = emotionQueryAdjustments[part.emotion] ?? {};
     const isQuestion = /[？?]$/.test(part.text) || /ですか|ますか|ませんか/.test(part.text);
-    const maxRate = part.kind === "narrator" || part.castId === "narrator" ? narratorRateCapForText(part.spokenText ?? part.displayText ?? part.text) : defaults.maxRate ?? rateCapForCast(part.castId, part.kind);
+    const maxRate = isNarratorVoice(part) ? NARRATOR_TEMPO_MULTIPLIER : defaults.maxRate ?? rateCapForCast(part.castId, part.kind);
     const tempoMultiplier = tempoMultiplierForVoice(part);
     query.speedScale = clampVoice((defaults.speed + (emotion.speed ?? 0)) * tempoMultiplier, 0.82, maxRate);
     query.pitchScale = clampVoice(defaults.pitch + (emotion.pitch ?? 0) + (isQuestion ? 0.012 : 0), -0.06, 0.08);

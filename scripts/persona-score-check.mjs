@@ -94,7 +94,7 @@ const evidence = {
     css.includes("transition: none !important") &&
     !css.includes("animation-duration: 0.01ms") &&
     !css.includes("transition-duration: 0.01ms"),
-  phaseObjectives: app.includes("phaseObjective") && app.includes("phase-checkline") && tests.includes("案件を1つ選び"),
+  phaseObjectives: app.includes("phaseObjective") && app.includes("phase-checkline") && app.includes("初回は案件001"),
   learningCards: app.includes("showLearningCard") && css.includes(".learning-card") && tests.includes("wrong appraisal choices"),
   decoyHotspots:
     app.includes("caseDecoyHotspots") &&

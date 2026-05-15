@@ -2126,6 +2126,63 @@ body.low-stimulus .result-celebration::after {
   margin: 0;
 }
 
+.rebuttal-resolution.supported {
+  position: relative;
+}
+
+.rebuttal-proof-highlight {
+  display: grid;
+  grid-template-columns: auto 1fr;
+  gap: 4px 10px;
+  align-items: center;
+  margin: 0 0 10px;
+  padding: 10px 12px;
+  color: #4a281f;
+  background: rgba(255, 247, 232, 0.78);
+  box-shadow: rgba(127, 29, 29, 0.24) 0 0 0 1px, rgba(201, 154, 56, 0.22) 0 8px 18px -14px;
+  animation: rebuttal-proof-focus 520ms ease-out both;
+}
+
+.rebuttal-proof-highlight span {
+  grid-column: 1 / -1;
+  color: #7f1d1d;
+  font-size: 11px;
+  font-weight: 900;
+  letter-spacing: 0.08em;
+}
+
+.rebuttal-proof-highlight em {
+  width: fit-content;
+  padding: 3px 7px;
+  color: #fff7e8;
+  background: #7f1d1d;
+  font-size: 12px;
+  font-style: normal;
+  font-weight: 900;
+}
+
+.rebuttal-proof-highlight strong {
+  grid-column: 1 / -1;
+  font-size: 14px;
+  line-height: 1.45;
+}
+
+.rebuttal-proof-highlight small {
+  grid-column: 1 / -1;
+  color: rgba(77, 52, 28, 0.78);
+  font-size: 12px;
+  font-weight: 700;
+  line-height: 1.55;
+}
+
+.rebuttal-beat {
+  margin: 0 0 8px;
+  color: rgba(77, 52, 28, 0.78);
+  font-size: 13px;
+  font-weight: 800;
+  line-height: 1.6;
+}
+
 .support-picker {
   display: grid;
   gap: 10px;
@@ -2421,6 +2478,10 @@ body.low-stimulus .result-celebration::after {
   line-height: 1.75;
 }
 
+.first-run-device-note {
+  display: none;
+}
+
 .case-library-strip {
   display: flex;
   flex-wrap: wrap;
@@ -2680,6 +2741,7 @@ body.low-stimulus .result-celebration::after {
 
 .file-tab,
 .file-badge,
+.file-first-run,
 .file-difficulty,
 .file-title,
 .file-subtitle,
@@ -2714,6 +2776,17 @@ body.low-stimulus .result-celebration::after {
   font-weight: 800;
 }
 
+.file-first-run {
+  width: fit-content;
+  margin: -4px 0 10px;
+  padding: 4px 9px;
+  color: #fff7e8;
+  background: #1f6b44;
+  box-shadow: rgba(31, 107, 68, 0.28) 0 8px 18px -14px;
+  font-size: 12px;
+  font-weight: 900;
+}
+
 .file-difficulty {
   width: fit-content;
   margin: -4px 0 10px;
@@ -2743,8 +2816,30 @@ body.low-stimulus .result-celebration::after {
   margin: 0 0 14px;
   overflow: hidden;
   border-radius: 3px;
-  background: #17110e;
+  background:
+    linear-gradient(180deg, rgba(17, 12, 9, 0.08), rgba(17, 12, 9, 0.28)),
+    url("./assets/kawabe-estate.svg"),
+    #3a2a1f;
+  background-position: center;
+  background-size: cover;
   box-shadow: rgba(77, 52, 28, 0.36) 0 0 0 1px, rgba(0, 0, 0, 0.2) 0 12px 22px -16px;
+}
+
+.file-photo-case002,
+.file-photo-case004,
+.file-photo-case007,
+.file-photo-case009 {
+  background-image:
+    linear-gradient(180deg, rgba(17, 12, 9, 0.08), rgba(17, 12, 9, 0.28)),
+    url("./assets/ekimae-commercial.svg");
+}
+
+.file-photo-case003,
+.file-photo-case008,
+.file-photo-case010 {
+  background-image:
+    linear-gradient(180deg, rgba(17, 12, 9, 0.08), rgba(17, 12, 9, 0.28)),
+    url("./assets/minamiguchi-redevelopment.svg");
 }
 
 .file-photo img {
@@ -2826,6 +2921,65 @@ body.low-stimulus .result-celebration::after {
   font-size: 13px;
   font-weight: 900;
   line-height: 1.35;
+}
+
+.case-file-desk.first-run .product-menu {
+  opacity: 0.74;
+}
+
+.first-run-mode #mode-meta,
+.first-run-mode #timer-meta,
+.first-run-mode .controller-meta,
+.first-run-mode .score-card {
+  display: none;
+}
+
+.case-file-desk.first-run .product-menu-button:not([data-product-panel="settings"]) {
+  opacity: 0.55;
+}
+
+.case-file-desk.first-run .product-menu-button:not([data-product-panel="settings"])::after {
+  display: block;
+  color: rgba(255, 239, 210, 0.62);
+  font-size: 10px;
+  font-weight: 700;
+  content: "クリア後に見る";
+}
+
+.case-file-desk.first-run .case-file:not([data-case-file="case001"]) .file-client,
+.case-file-desk.first-run .case-file:not([data-case-file="case001"]) .file-guide,
+.case-file-desk.first-run .case-file:not([data-case-file="case001"]) .file-records {
+  display: none;
+}
+
+.case-file-desk.first-run .case-file:not([data-case-file="case001"]) .file-description {
+  display: -webkit-box;
+  overflow: hidden;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 2;
+}
+
+.case-file-desk.first-run .case-file:not([data-case-file="case001"]) .case-audit-stamp {
+  opacity: 0.42;
+}
+
+.case-file-desk.first-run .case-file:not([data-case-file="case001"]) .case-audit-stamp::after {
+  position: absolute;
+  right: -4px;
+  bottom: -22px;
+  width: max-content;
+  color: rgba(255, 247, 232, 0.78);
+  font-size: 10px;
+  font-weight: 800;
+  content: "2周目";
+}
+
+.pressure-setup {
+  margin: 0 0 12px;
+  color: #5d211c;
+  font-size: 14px;
+  font-weight: 800;
+  line-height: 1.7;
 }
 
 .case-audit-stamp {
@@ -4061,7 +4215,7 @@ body.low-stimulus .result-celebration::after {
 
 @keyframes evidence-pop {
   0% {
-    opacity: 0;
+    opacity: 0.04;
     transform: translate(-50%, -45%) rotate(-2deg) scale(0.96);
   }
   24% {
@@ -4079,6 +4233,21 @@ body.low-stimulus .result-celebration::after {
   100% {
     opacity: 0;
     transform: translate(-50%, -54%) rotate(0deg) scale(0.98);
+  }
+}
+
+@keyframes rebuttal-proof-focus {
+  0% {
+    opacity: 0.62;
+    transform: translateY(6px);
+  }
+  70% {
+    opacity: 1;
+    transform: translateY(0);
+  }
+  100% {
+    opacity: 1;
+    transform: translateY(0);
   }
 }
 
@@ -4305,6 +4474,16 @@ body.low-stimulus .result-celebration::after {
   .phase-game-desk {
     gap: 18px;
     padding: 18px 14px;
+  }
+
+  .case-file-desk.first-run .first-run-device-note {
+    display: block;
+    padding: 8px 10px;
+    color: #fff7e8;
+    background: rgba(36, 89, 135, 0.36);
+    box-shadow: rgba(255, 247, 232, 0.16) 0 0 0 1px inset;
+    font-size: 12px;
+    line-height: 1.55;
   }
 
   .phase-game-desk {

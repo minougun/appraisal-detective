@@ -423,7 +423,9 @@ function renderEvidenceBoard({ selectable = false } = {}) {
       board.append(slot);
     });
     const help = document.createElement("p");
-    help.textContent = "物件や資料から根拠を発見すると、専門用語カードとしてここに蓄積される。";
+    help.textContent = state.phase < 0
+      ? "初回は3枚の根拠を集める。依頼者の希望に、根拠で線を引く。集めた根拠はプレイ中ここに並ぶ。"
+      : "物件や資料から根拠を発見すると、専門用語カードとしてここに蓄積される。";
     board.append(help);
     return;
   }
@@ -506,6 +508,7 @@ function focusPhaseTitle() {
 function renderShell() {
   const [kicker, title] = state.phase < 0 ? ["事件ファイル", "案件選択"] : phaseMeta[state.phase];
   const caseInfo = currentCase();
+  const firstRun = state.phase < 0 && Object.values(state.records).every((record) => (record?.completions ?? 0) === 0);
   document.querySelector("#phase-kicker").textContent = kicker;
   document.querySelector("#phase-title").textContent = title;
   document.querySelector("#phase-objective").textContent = phaseObjective();
@@ -516,6 +519,7 @@ function renderShell() {
   document.body.classList.toggle("challenge-mode", state.challengeMode);
   document.body.classList.toggle("low-stimulus", lowStimulus);
   document.body.classList.toggle("operation-mode", state.phase >= 0);
+  document.body.classList.toggle("first-run-mode", firstRun);
   renderBgmToggle();
   renderAudioToggle();
   renderVoiceToggle();
@@ -548,7 +552,7 @@ function renderTimerMeta() {
 }
 
 function phaseObjective() {
-  if (state.phase < 0) return "案件を1つ選び、通常レビューか監査レビューを選ぶ。";
+  if (state.phase < 0) return "初回は案件001で、3枚の根拠を集める。依頼者の希望に、根拠で線を引く。";
   const guidePrefix =
     currentCase().difficulty?.label === "イージー"
       ? "ガイドを読み、"
@@ -1314,6 +1318,7 @@ function renderCaseSelect() {
   const highestAudit = entries
     .map((entry) => entry.record.bestAudit)
     .filter((value) => value !== null && value !== undefined);
+  const firstRun = totalCompletions === 0;
   const introPending = !state.storyRevealed;
   view.innerHTML = `
     <section class="title-screen ${introPending ? "title-screen-intro" : "title-screen-desk"}">
@@ -1321,17 +1326,28 @@ function renderCaseSelect() {
         introPending
           ? novelSceneMarkup()
           : `
-            <div class="case-file-desk" aria-label="机上の事件ファイル">
+            <div class="case-file-desk ${firstRun ? "first-run" : ""}" aria-label="机上の事件ファイル">
               <div class="desk-lamp" aria-hidden="true"></div>
               <div class="desk-case-header">
                 <span class="case-desk-stamp">鑑定事務所 / 事件簿</span>
                 <h3>机上の事件ファイルを開く</h3>
-                <p>ファイルを選ぶと受任面談へ入る。赤い監査札は、二周目以降の厳格レビューだ。</p>
+                <p>${firstRun ? "まずは左の案件001だけでいい。3枚の根拠で、依頼者の希望に線を引く。" : "ファイルを選ぶと受任面談へ入る。赤い監査札は、二周目以降の厳格レビューだ。"}</p>
+                <p class="first-run-device-note">スマホでも導入は遊べます。本格的な資料照合は、PCのほうが見やすいです。</p>
                 <div class="case-library-strip" aria-label="製品記録">
-                  <span>事件ファイル ${htmlText(entries.length)}件</span>
-                  <span>完了 ${htmlText(totalCompletions)}回</span>
-                  <span>通常最高 ${htmlText(highestNormal.length ? Math.max(...highestNormal) : "未記録")}</span>
-                  <span>監査最高 ${htmlText(highestAudit.length ? Math.max(...highestAudit) : "未記録")}</span>
+                  ${
+                    firstRun
+                      ? `
+                        <span>初回おすすめ 案件001</span>
+                        <span>3枚の根拠で希望に線を引く</span>
+                        <span>監査レビューはクリア後でOK</span>
+                      `
+                      : `
+                        <span>事件ファイル ${htmlText(entries.length)}件</span>
+                        <span>完了 ${htmlText(totalCompletions)}回</span>
+                        <span>通常最高 ${htmlText(highestNormal.length ? Math.max(...highestNormal) : "未記録")}</span>
+                        <span>監査最高 ${htmlText(highestAudit.length ? Math.max(...highestAudit) : "未記録")}</span>
+                      `
+                  }
                 </div>
                 <div class="product-menu" aria-label="製品メニュー">
                   <button class="product-menu-button" data-product-panel="settings">設定</button>
@@ -1356,7 +1372,7 @@ function renderCaseSelect() {
                   )
                   .join("")}
               </div>
-              <button class="desk-clear-button" id="clear-records">記録を消す</button>
+              <button class="desk-clear-button" id="clear-records">${firstRun ? "記録管理" : "記録を消す"}</button>
               ${state.productPanel ? productPanelMarkup(state.productPanel, entries, totalCompletions) : ""}
             </div>
           `
@@ -1528,26 +1544,33 @@ function scenarioRecordLine(info, record = normalizeRecord()) {
 function caseFileMarkup({ id, number, badge, title, subtitle, description, record, rotation }) {
   const info = caseDefinitions[id];
   const difficulty = info.difficulty;
+  const imagePath = caseImagePath(info.image, info.fallbackImage);
+  const fallbackPath = caseImagePath(info.fallbackImage);
+  const isFirstRecommendation = id === "case001";
+  const fileDescription = isFirstRecommendation
+    ? "相続協議の案件。「高く見せたい」希望に、3枚の根拠で線を引く。"
+    : description;
   return `
     <article class="case-file case-file-${classToken(rotation)}" data-case-file="${htmlAttr(id)}">
       <button class="case-file-folder" data-start-case="${htmlAttr(id)}" data-mode="normal" aria-label="${htmlAttr(`${title} ${subtitle}を通常レビューで開始`)}">
         <span class="file-tab">案件 ${htmlText(number)}</span>
         <span class="file-badge">${htmlText(badge)}</span>
+        ${isFirstRecommendation ? `<span class="file-first-run">初回おすすめ</span>` : ""}
         <span class="file-difficulty difficulty-${classToken(difficulty?.code?.toLowerCase(), "normal")}">${htmlText(difficulty?.label ?? "通常")}</span>
-        <figure class="file-photo">
-          <img src="${htmlAttr(caseImagePath(info.image, info.fallbackImage))}" data-fallback-src="${htmlAttr(caseImagePath(info.fallbackImage))}" alt="${htmlAttr(info.imageAlt)}" />
+        <figure class="file-photo file-photo-${classToken(id)}">
+          <img src="${htmlAttr(imagePath)}" data-fallback-src="${htmlAttr(fallbackPath)}" alt="${htmlAttr(info.imageAlt)}" loading="eager" decoding="async" fetchpriority="${Number(number) <= 3 ? "high" : "auto"}" />
         </figure>
         <span class="file-title">${htmlText(title)}</span>
         <span class="file-subtitle">${htmlText(subtitle)}</span>
-        <span class="file-client">${htmlText(info.client.name)}: ${htmlText(info.client.tension)}</span>
-        <span class="file-description">${htmlText(description)}</span>
+        <span class="file-client">${htmlText(info.client.name)}: ${htmlText(info.client.gameplayLines?.report ?? info.client.tension)}</span>
+        <span class="file-description">${htmlText(fileDescription)}</span>
         <span class="file-guide">${htmlText(difficulty?.summary ?? "")}</span>
         <span class="file-records">
           <span>通常 ${htmlText(record.bestNormal ?? "未完了")}</span>
           <span>監査 ${htmlText(record.bestAudit ?? "未完了")}</span>
           <span>${htmlText(record.completions)}回</span>
         </span>
-        <span class="file-start-label">通常レビューを開始</span>
+        <span class="file-start-label">${isFirstRecommendation ? "ここから開始" : "通常レビューを開始"}</span>
       </button>
       <button class="case-audit-stamp" data-start-case="${htmlAttr(id)}" data-mode="audit" aria-label="${htmlAttr(`${title}を監査レビューで開始`)}">監査</button>
     </article>
@@ -2483,10 +2506,10 @@ function renderReport() {
   const missingSteps = reportMissingSteps();
   const client = currentCase().client;
   const baseClientPressure = currentCase().reportPressure?.client ?? (isRedevelopmentCase
-    ? "住民説明は後回しでいいので、14階案を前提にしてください。ここで低く出ると地権者がまとまりません。"
+    ? "14階案を切ると地権者が動きません。可能性が残る書き方にしてもらえませんか。"
     : isIncomeCase
-    ? "銀行評価を通すため、還元利回りは4%台で見せたいんです。ここだけ少し丸められませんか。"
-    : "妹にはこの家の価値を高く見せたいんです。根拠の範囲で、上側に説明できる余地はありませんか。");
+    ? "借換が止まると困ります。空室は一時的として、もう少し強い収益に見せられませんか。"
+    : "その額では、妹は納得しません。もう少し高く見られる根拠はありませんか。");
   const mentorPressure = currentCase().reportPressure?.mentor ?? (isRedevelopmentCase
     ? "計画を聞くのは実務だ。ただし最有効使用は、法規制、権利調整、市場性で説明できる範囲に収める。"
     : isIncomeCase
@@ -2532,8 +2555,9 @@ function renderReport() {
         ${selectedCount === 3 ? rebuttalOptionsMarkup(reportIds) : ""}
       </article>
       <article class="brief-card urgent">
-        <span class="term-chip">説明可能な裁量</span>
-        <h3>依頼者要望への応答</h3>
+        <span class="term-chip">依頼者からの最後の圧力</span>
+        <h3>${htmlText(client.name)}の希望に、根拠で線を引く</h3>
+        <p class="pressure-setup">ここで相手に寄せると、報告書は通りやすく見えても鑑定評価として崩れる。</p>
         <div class="dialogue">
           ${speakerMarkup("client", client, clientPressure, { pressure: true })}
           ${speakerMarkup("mentor", {}, mentorPressure)}
@@ -2688,7 +2712,7 @@ function rebuttalResolutionMarkup(option, evidenceId) {
   const client = currentCase().client;
   const supported = Boolean(option?.correct && state.rebuttalSupported);
   const clientLine = supported
-    ? "そこまで根拠を並べられると、こちらの希望だけでは押せませんね。"
+    ? option.successClientLine ?? "……そこまで根拠を並べられると、こちらの希望だけでは押せませんね。"
     : "その説明だと、こちらの反論にまだ直接答えていないように聞こえます。";
   const playerLine = supported
     ? `${evidence?.term ?? "根拠"}として「${evidence?.title ?? "提示済み証拠"}」を置きます。評価額は希望額ではなく、この前提から説明します。`
@@ -2696,8 +2720,21 @@ function rebuttalResolutionMarkup(option, evidenceId) {
   const mentorLine = supported
     ? "二往復目まで根拠で返せた。最後は説明可能な裁量の範囲で、評価書の結論として閉じよう。"
     : "反論の往復で崩れるなら、報告根拠の選び方に戻ろう。強い三枚を組み直すんだ。";
+  const beatLine = option?.successBeatLine ?? `${client.name}が一瞬、資料に目を落とす。`;
+  const proofHighlight = supported
+    ? `
+      <div class="rebuttal-proof-highlight" data-testid="rebuttal-proof-highlight">
+        <span>押し返した根拠</span>
+        <em>${htmlText(evidence?.term ?? "根拠")}</em>
+        <strong>${htmlText(evidence?.title ?? "提示済み証拠")}</strong>
+        <small>${htmlText(evidence?.detail ?? "相手の反論に直接返す根拠。")}</small>
+      </div>
+      <p class="rebuttal-beat" data-testid="rebuttal-beat">${htmlText(beatLine)}</p>
+    `
+    : "";
   return `
-    <div class="dialogue rebuttal-resolution" aria-label="報告対決 二往復目">
+    <div class="dialogue rebuttal-resolution ${supported ? "supported" : "unsupported"}" aria-label="報告対決 二往復目">
+      ${proofHighlight}
       ${speakerMarkup("client", client, clientLine, { pressure: !supported })}
       ${speakerMarkup("player", { name: "新人鑑定士", initial: "新" }, playerLine)}
       ${speakerMarkup("mentor", {}, mentorLine)}

@@ -104,10 +104,14 @@ SteamPipe用テンプレート:
 
 - `steamworks/app_build_template.vdf`
 - `steamworks/depot_build_windows_template.vdf`
+- `steamworks/store-release-checklist.md`
 
 移植ハンドオフ:
 
 - `docs/steam-port-handoff-2026-05-16.md`
+- `docs/steam-store-page-draft-2026-05-17.md`
+
+Windows depot候補は、Windows実機またはGitHub Actionsの `Steam Windows Build` workflowで生成します。WSL/Linuxで直接 `build:steam:win-dir` を走らせる場合はwineが必要です。
 
 ## 画像生成
 

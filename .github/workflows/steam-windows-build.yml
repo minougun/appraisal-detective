@@ -1,0 +1,56 @@
+name: Steam Windows Build
+
+on:
+  workflow_dispatch:
+  pull_request:
+    paths:
+      - ".github/workflows/steam-windows-build.yml"
+      - "desktop/**"
+      - "steamworks/**"
+      - "assets/**"
+      - "renderers/**"
+      - "*.js"
+      - "*.json"
+      - "*.html"
+      - "*.css"
+      - "scripts/verify-steam-readiness.mjs"
+
+jobs:
+  windows-steam-depot-candidate:
+    runs-on: windows-latest
+    timeout-minutes: 30
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: "24"
+          cache: npm
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Verify Steam readiness
+        run: npm run test:steam-readiness
+
+      - name: Build Windows depot candidate
+        run: npm run build:steam:win-dir
+
+      - name: Verify packaged app contents
+        shell: bash
+        run: |
+          test -f "dist/desktop/win-unpacked/鑑定DE探偵.exe"
+          npx asar list dist/desktop/win-unpacked/resources/app.asar | grep '/index.html'
+          npx asar list dist/desktop/win-unpacked/resources/app.asar | grep '/desktop/main.cjs'
+          ! npx asar list dist/desktop/win-unpacked/resources/app.asar | grep 'visual-refresh-baseline'
+          ! npx asar list dist/desktop/win-unpacked/resources/app.asar | grep 'asset-provenance'
+
+      - name: Upload Windows depot candidate
+        uses: actions/upload-artifact@v4
+        with:
+          name: appraisal-detective-windows-steam-depot-candidate
+          path: dist/desktop/win-unpacked
+          if-no-files-found: error

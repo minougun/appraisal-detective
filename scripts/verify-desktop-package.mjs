@@ -8,10 +8,9 @@ const asarPath = path.join(packageDir, "resources", "app.asar");
 assert(existsSync(packageDir), `package directory does not exist: ${packageDir}`);
 assert(existsSync(asarPath), `app.asar does not exist: ${asarPath}`);
 
-const executable = readdirSync(packageDir).find((file) => {
-  if (process.platform === "win32" || packageDir.includes("win-unpacked")) return file.endsWith(".exe");
-  return file === "appraisal-detective";
-});
+const packageFiles = readdirSync(packageDir);
+const executable = packageFiles.find((file) => file.endsWith(".exe"))
+  ?? packageFiles.find((file) => file === "appraisal-detective");
 assert(executable, `desktop executable was not found in ${packageDir}`);
 
 const entries = new Set(listPackage(asarPath).map(normalizeAsarEntry));

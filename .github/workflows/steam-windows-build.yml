@@ -14,6 +14,7 @@ on:
       - "*.json"
       - "*.html"
       - "*.css"
+      - "scripts/verify-desktop-package.mjs"
       - "scripts/verify-steam-readiness.mjs"
   workflow_dispatch:
   pull_request:
@@ -27,6 +28,7 @@ on:
       - "*.json"
       - "*.html"
       - "*.css"
+      - "scripts/verify-desktop-package.mjs"
       - "scripts/verify-steam-readiness.mjs"
 
 jobs:

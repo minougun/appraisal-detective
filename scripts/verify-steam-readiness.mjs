@@ -18,8 +18,10 @@ assert(packageJson.scripts["test:desktop-package"] === "node scripts/verify-desk
 assert(packageJson.scripts["test:steam-readiness"] === "node scripts/verify-steam-readiness.mjs", "Steam readiness script must be wired");
 assert(packageJson.devDependencies.electron, "Electron must be pinned as a dev dependency");
 assert(packageJson.devDependencies["electron-builder"], "electron-builder must be pinned as a dev dependency");
+assert(packageJson.devDependencies["@electron/asar"], "@electron/asar must be pinned for cross-platform package verification");
 assert(packageLock.packages["node_modules/electron"], "package-lock must pin Electron");
 assert(packageLock.packages["node_modules/electron-builder"], "package-lock must pin electron-builder");
+assert(packageLock.packages["node_modules/@electron/asar"], "package-lock must pin @electron/asar");
 
 assert(packageJson.build?.appId === "com.minougun.appraisal-detective", "desktop app id must be stable");
 assert(packageJson.build?.asar === true, "desktop package should use asar for a compact Steam depot");

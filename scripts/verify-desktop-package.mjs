@@ -14,14 +14,14 @@ const executable = readdirSync(packageDir).find((file) => {
 });
 assert(executable, `desktop executable was not found in ${packageDir}`);
 
-const entries = listPackage(asarPath).join("\n");
+const entries = new Set(listPackage(asarPath).map((entry) => `/${entry.replace(/^\/+/, "")}`));
 
 for (const expected of ["/index.html", "/desktop/main.cjs", "/desktop/preload.cjs", "/assets/audio/mixkit-echoes-188.mp3"]) {
-  assert(entries.includes(expected), `packaged app is missing ${expected}`);
+  assert(entries.has(expected), `packaged app is missing ${expected}`);
 }
 
 for (const forbidden of ["visual-refresh-baseline", "asset-provenance"]) {
-  assert(!entries.includes(forbidden), `packaged app must not include ${forbidden}`);
+  assert(!Array.from(entries).some((entry) => entry.includes(forbidden)), `packaged app must not include ${forbidden}`);
 }
 
 console.log(`desktop_package_checks=passed package=${packageDir} executable=${executable}`);

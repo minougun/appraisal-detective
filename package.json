@@ -22,6 +22,7 @@
     "test:production": "node scripts/verify-production-server.mjs",
     "test:deploy-config": "node scripts/verify-deploy-config.mjs",
     "test:public-headers": "node scripts/verify-public-headers.mjs",
+    "test:desktop-package": "node scripts/verify-desktop-package.mjs",
     "test:steam-readiness": "node scripts/verify-steam-readiness.mjs",
     "test:e2e": "playwright test tests --reporter=line"
   },

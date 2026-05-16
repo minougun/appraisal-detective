@@ -54,13 +54,7 @@ jobs:
         run: npm run build:steam:win-dir
 
       - name: Verify packaged app contents
-        shell: bash
-        run: |
-          test -f "dist/desktop/win-unpacked/鑑定DE探偵.exe"
-          npx asar list dist/desktop/win-unpacked/resources/app.asar | grep '/index.html'
-          npx asar list dist/desktop/win-unpacked/resources/app.asar | grep '/desktop/main.cjs'
-          ! npx asar list dist/desktop/win-unpacked/resources/app.asar | grep 'visual-refresh-baseline'
-          ! npx asar list dist/desktop/win-unpacked/resources/app.asar | grep 'asset-provenance'
+        run: npm run test:desktop-package -- dist/desktop/win-unpacked
 
       - name: Upload Windows depot candidate
         uses: actions/upload-artifact@v4

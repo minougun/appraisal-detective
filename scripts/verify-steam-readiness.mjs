@@ -14,6 +14,7 @@ const checklist = readFileSync("steamworks/store-release-checklist.md", "utf8");
 assert(packageJson.main === "desktop/main.cjs", "package main must point to Electron desktop entry");
 assert(packageJson.scripts["start:desktop"] === "electron .", "start:desktop script must launch Electron");
 assert(packageJson.scripts["build:steam:win-dir"]?.includes("--win dir"), "Steam Windows dir build script must exist");
+assert(packageJson.scripts["test:desktop-package"] === "node scripts/verify-desktop-package.mjs", "desktop package verification script must be wired");
 assert(packageJson.scripts["test:steam-readiness"] === "node scripts/verify-steam-readiness.mjs", "Steam readiness script must be wired");
 assert(packageJson.devDependencies.electron, "Electron must be pinned as a dev dependency");
 assert(packageJson.devDependencies["electron-builder"], "electron-builder must be pinned as a dev dependency");
@@ -39,6 +40,7 @@ assert(preload.includes("APPRAISAL_STEAM_DESKTOP"), "preload must expose a minim
 for (const file of [
   "desktop/steam_appid.example.txt",
   ".github/workflows/steam-windows-build.yml",
+  "scripts/verify-desktop-package.mjs",
   "steamworks/app_build_template.vdf",
   "steamworks/depot_build_windows_template.vdf",
   "steamworks/store-release-checklist.md",
@@ -50,6 +52,7 @@ for (const file of [
 
 assert(workflowText.includes("windows-steam-depot-candidate:"), "Windows Steam build workflow must define depot candidate job");
 assert(workflowText.includes("npm run build:steam:win-dir"), "Windows Steam build workflow must build the depot candidate");
+assert(workflowText.includes("npm run test:desktop-package -- dist/desktop/win-unpacked"), "Windows Steam build workflow must verify package contents");
 assert(workflowText.includes("actions/upload-artifact@v4"), "Windows Steam build workflow must upload an artifact");
 assert(steamReadme.includes("Uploading a build is not the same as releasing it"), "Steamworks README must state release boundary");
 assert(appBuild.includes("REPLACE_WITH_STEAM_APP_ID"), "app build template must keep app id placeholder");

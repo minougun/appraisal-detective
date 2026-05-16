@@ -83,6 +83,32 @@ http://127.0.0.1:44561/
 
 `npm run test:persona` の `persona_average=100.0` は、商用レビューの平均点ではなく仕様充足ゲートです。出力上も `persona_gate_type=spec_coverage_not_human_commercial_quality` として区別しています。商用95点判定には、別途人間プレイテスト、ストア素材、アセット権利確認、案件001〜003の初見体験レビューが必要です。
 
+## Steam配信用デスクトップ版
+
+Steam配信向けにはElectronでローカルHTMLを読み込むデスクトップ版を用意しています。Steamworks側のApp ID、Depot ID、審査提出、費用支払い、リリース操作はSteamworks権限が必要です。
+
+```bash
+cd /mnt/c/Users/minou/appraisal-detective
+
+# Steam移植前提の静的検証
+npm run test:steam-readiness
+
+# 現在のOS向けに未圧縮デスクトップビルドを作る
+npm run build:desktop:dir
+
+# Windows Steam depot候補を作る
+npm run build:steam:win-dir
+```
+
+SteamPipe用テンプレート:
+
+- `steamworks/app_build_template.vdf`
+- `steamworks/depot_build_windows_template.vdf`
+
+移植ハンドオフ:
+
+- `docs/steam-port-handoff-2026-05-16.md`
+
 ## 画像生成
 
 画像制作の標準入口は app server 側の imagegen / ImageGen 実行面です。新規背景、キャラクター、カード、サムネイル、ストア素材は、まず imagegen で候補を作り、採用する画像だけ `scripts/adopt-image-asset.mjs` で `assets/` と台帳へ取り込みます。

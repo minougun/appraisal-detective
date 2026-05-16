@@ -2,11 +2,16 @@
   "name": "appraisal-detective",
   "version": "0.1.0",
   "private": true,
+  "author": "minougun",
   "description": "Local build of a real-estate appraisal detective game.",
+  "main": "desktop/main.cjs",
   "scripts": {
     "start": "node scripts/serve-production.mjs",
     "start:dev": "python3 -m http.server 44561",
+    "start:desktop": "electron .",
     "start:production": "node scripts/serve-production.mjs",
+    "build:desktop:dir": "electron-builder --dir",
+    "build:steam:win-dir": "electron-builder --win dir",
     "generate:assets": "node scripts/generate-image-assets.mjs",
     "refresh:assets": "node scripts/refresh-image-assets.mjs",
     "adopt:asset": "node scripts/adopt-image-asset.mjs",
@@ -17,9 +22,60 @@
     "test:production": "node scripts/verify-production-server.mjs",
     "test:deploy-config": "node scripts/verify-deploy-config.mjs",
     "test:public-headers": "node scripts/verify-public-headers.mjs",
+    "test:steam-readiness": "node scripts/verify-steam-readiness.mjs",
     "test:e2e": "playwright test tests --reporter=line"
   },
+  "build": {
+    "appId": "com.minougun.appraisal-detective",
+    "productName": "鑑定DE探偵",
+    "directories": {
+      "output": "dist/desktop"
+    },
+    "asar": true,
+    "files": [
+      "desktop/**",
+      "index.html",
+      "boot.js",
+      "app-utils.js",
+      "audio-controller.js",
+      "game-state.js",
+      "case-data.js",
+      "commercial-case-pack.js",
+      "case-schema.js",
+      "scoring.js",
+      "scenario-engine.js",
+      "gameplay-cast.js",
+      "platform-controller.js",
+      "app.js",
+      "styles.css",
+      "renderers/**",
+      "assets/**",
+      "!assets/visual-refresh-baseline-2026-05-08/**",
+      "assets-manifest.json",
+      "docs/third-party-audio-notices.md",
+      "docs/credits-and-ai-disclosure-final-2026-05-07.md"
+    ],
+    "win": {
+      "target": [
+        "dir"
+      ]
+    },
+    "linux": {
+      "target": [
+        "dir"
+      ],
+      "category": "Game"
+    },
+    "mac": {
+      "target": [
+        "dir"
+      ],
+      "category": "public.app-category.games"
+    }
+  },
   "devDependencies": {
-    "@playwright/test": "1.59.1"
+    "@playwright/test": "1.59.1",
+    "electron": "42.1.0",
+    "electron-builder": "26.8.1"
   }
 }

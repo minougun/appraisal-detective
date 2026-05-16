@@ -14,7 +14,7 @@ const executable = readdirSync(packageDir).find((file) => {
 });
 assert(executable, `desktop executable was not found in ${packageDir}`);
 
-const entries = new Set(listPackage(asarPath).map((entry) => `/${entry.replace(/^\/+/, "")}`));
+const entries = new Set(listPackage(asarPath).map(normalizeAsarEntry));
 
 for (const expected of ["/index.html", "/desktop/main.cjs", "/desktop/preload.cjs", "/assets/audio/mixkit-echoes-188.mp3"]) {
   assert(entries.has(expected), `packaged app is missing ${expected}`);
@@ -28,4 +28,8 @@ console.log(`desktop_package_checks=passed package=${packageDir} executable=${ex
 
 function assert(condition, message) {
   if (!condition) throw new Error(message);
+}
+
+function normalizeAsarEntry(entry) {
+  return `/${String(entry).replaceAll("\\", "/").replace(/^\/+/, "")}`;
 }

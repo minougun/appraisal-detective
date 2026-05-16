@@ -1,6 +1,20 @@
 name: Steam Windows Build
 
 on:
+  push:
+    branches:
+      - main
+    paths:
+      - ".github/workflows/steam-windows-build.yml"
+      - "desktop/**"
+      - "steamworks/**"
+      - "assets/**"
+      - "renderers/**"
+      - "*.js"
+      - "*.json"
+      - "*.html"
+      - "*.css"
+      - "scripts/verify-steam-readiness.mjs"
   workflow_dispatch:
   pull_request:
     paths:

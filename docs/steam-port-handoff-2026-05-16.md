@@ -15,6 +15,16 @@
 - Steam配信用パッケージに含めるファイルを `package.json` の `build.files` に固定。
 - 非公開の `.asset-provenance.private.json` はパッケージ対象外。
 
+## 2026-05-17 本番反映状況
+
+- `main` を `origin/main` へpush済み。
+- GitHub Actions `Steam Windows Build` は最新run `25969880004` で成功。
+- Windows artifact `appraisal-detective-windows-steam-depot-candidate` を取得済み。
+- 取得artifactは `dist/github-actions/steam-windows-latest` に展開済み。
+- `npm run test:desktop-package -- dist/github-actions/steam-windows-latest` は成功。
+- Windows実機側PowerShell経由で `鑑定DE探偵.exe` を起動し、6秒後もプロセスが生存することを確認済み。
+- 確認後、起動プロセスは終了処理済み。
+
 ## 境界
 
 ここまでで「Steamに載せられるデスクトップビルドを作る基盤」は入った。ただし、Steamworks側の以下はローカルだけでは完了できない。
@@ -27,6 +37,8 @@
 - Coming Soon公開。
 - Valveレビュー。
 - 最終リリースボタン操作。
+
+2026-05-17時点では、Steamクライアントは `/mnt/c/Program Files (x86)/Steam/steam.exe` に存在するが、Steam App ID / Depot IDが未発行で、Steamworks SDK / `steamcmd` もこの作業環境内では未確認。そのため、SteamPipeアップロード、Steamクライアント経由のApp ID起動、Store page / build review提出、Coming Soon公開、最終リリース操作は未実施。
 
 ## 公式要件メモ
 
@@ -58,6 +70,8 @@ SteamPipeのビルドアップロードは、Steamworks SDKに含まれるコマ
 8. Steamクライアントからインストール・起動確認。
 9. ストアページ、価格、ビルドをレビュー提出。
 
+2026-05-17時点で1〜4は完了。次の実作業は5のSteamworks管理画面でのApp ID / Depot ID取得。
+
 ## Steamストア素材の残タスク
 
 - カプセル画像一式。
@@ -70,8 +84,8 @@ SteamPipeのビルドアップロードは、Steamworks SDKに含まれるコマ
 
 ## 残リスク
 
-- WSL/Linux環境での `build:steam:win-dir` は、ElectronのWindows exe resource更新にwineが必要なため未完了。Windows実機またはwine入りCIで再実行する。
-- Windows実機での起動確認は未実施。
+- WSL/Linux環境での `build:steam:win-dir` は、ElectronのWindows exe resource更新にwineが必要なため未完了。GitHub ActionsのWindows runnerでは成功済み。
+- Windows実機での起動smokeは実施済み。ただし、目視でのフル操作確認は未実施。
 - Steamクライアント経由の起動確認は未実施。
 - Steam overlay / achievements / cloud saveは未実装。
 - Steamworks SDKは未同梱。SDKのライセンスと認証が必要。
